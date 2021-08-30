@@ -93,7 +93,7 @@ while(True):
     
     # Show final image
     cv.imshow("Frame", cont)
-    cv.setMouseCallback('Frame',mouse_event)
+    if hin: cv.setMouseCallback('Frame',mouse_event)
     
     # # Show debug info
     # W,H,_ = img.shape

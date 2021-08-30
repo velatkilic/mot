@@ -73,14 +73,3 @@ class GMM:
             gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
             self.gmm.apply(gray)
         self.cap.release()
-    
-        
-
-# # train gmm
-# gmm   = 
-# while(True):
-#     _, img = cap.read()
-#     if img is None: break
-#     gray   = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
-#     gmm.apply(gray)
-# cap.release()
