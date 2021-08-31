@@ -38,17 +38,18 @@ class Canny:
         return bbox
 
 class GMM:
-    def __init__(self,fname, history=100, varThreshold=40, it_closing=1, minArea=20):
+    def __init__(self,fname, crop, history=100, varThreshold=40, it_closing=1, minArea=20):
         self.cap        = cv.VideoCapture(fname)
         self.it_closing = it_closing
         self.minArea    = minArea
+        self.crop       = crop
         self.gmm        = cv.createBackgroundSubtractorMOG2(history=history,
                                                             varThreshold=varThreshold)
         print("Training GMM")
         self.__train()
         
     def getBbox(self,img):
-        gray    = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
+        gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
         mask = self.gmm.apply(gray)
         # Morphological transformation: closing
         kernel  = np.ones((8,8), dtype=np.uint8)
@@ -71,5 +72,6 @@ class GMM:
             _, img = self.cap.read()
             if img is None: break
             gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
+            gray = gray[0:self.crop,0:self.crop]
             self.gmm.apply(gray)
         self.cap.release()

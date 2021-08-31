@@ -24,6 +24,10 @@ parser.add_argument("-c","--control", type=bool, default=True,
 parser.add_argument("-d","--model", type=str, default="gmm",
                     help="Object detector model. Currently available options\
                         are: gmm and canny" )
+
+parser.add_argument("-x","--crop", type=int, default=512,
+                        help="Crop each frame. -1 for no cropping")
+
 args = parser.parse_args()
 
 vidname   = args.name                   # video file name
@@ -31,11 +35,12 @@ hin       = args.control                # Human in the loop?
 cwd       = os.getcwd()                 # current working directory
 fname     = os.path.join(cwd,vidname)   # join cwd with videoname
 cap       = cv.VideoCapture(fname)      # video capture object for reading frames
+crop      = args.crop
 
 if args.model == "canny":
     det = Canny()
 elif args.model == "gmm":
-    det = GMM(fname)
+    det = GMM(fname,crop)
 else:
     print("Invalid model name. Pick either gmm or canny")
 
@@ -83,8 +88,8 @@ while(True):
     
     if img is None: break
     
-    # edge = gmm.apply(gray)
-        # _, edge = cv.threshold(edge,50,255,cv.THRESH_BINARY)
+    # if crop needed
+    img = img[0:args.crop,0:args.crop,:]
     
     bbox = det.getBbox(img)
     
