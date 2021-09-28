@@ -5,10 +5,11 @@ Human in the loop
 
 import cv2 as cv
 import numpy as np
-import os
+
 from mot.utils import imosaic, drawBox, findClosestBox, drawBlobs, writeBlobs
 from mot.kalman import MOT
 from mot.detectors import Canny, GMM
+from logger import Logger
 
 
 def identify(fname, model, imgOutDir, blobsOutFile, control=False, crop=(512, 512)):
@@ -31,14 +32,14 @@ def identify(fname, model, imgOutDir, blobsOutFile, control=False, crop=(512, 51
     elif model == "gmm":
         det = GMM(fname,crop)
     else:
-        print("Invalid model name. Pick either gmm or canny")
+        Logger.warning("Invalid model name. Pick either gmm or canny")
         det = GMM(fname,crop)
 
     # Mouse events for human in the loop control
     drawing = False
 
     # Object detection and kalman
-    print("Detecting particles ...")
+    Logger.detail("Detecting particles ...")
     cnt = 0
     while(True):
         # read a single frame

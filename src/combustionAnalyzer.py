@@ -5,7 +5,7 @@ from mot.identifier import identify
 from digraph.digraph import Digraph
 from digraph.utils import load_text, collect_images, paste_images, generate_video
 from digraph import commons
-from cv2 import cv
+import cv2 as cv
 
 from logger import Logger
 
@@ -15,7 +15,7 @@ from logger import Logger
 @click.option("-m", "--write-meta-data", "write_meta", is_flag=True, default=True,
               help="Whether write meta-data like bbox of identified particles "\
                    "and reproduced pictures from the diagraph.")
-@click.option("-c", "--crop", default=512, type=(int, int),
+@click.option("-c", "--crop", default=(512, 152), type=(int, int),
               help="Crop sizes in x and y dimension for each video frame.")
 @click.option("-d", "--draw-type", default="plain", type=str,
               help="Modes of pictures to reproduce: 'plain', 'overlay', 'line'."\
@@ -25,7 +25,7 @@ from logger import Logger
 @click.option("-o", "--io", default="warning", type=str,
               help="IO level. Available options are: 'quiet', 'baisc' "\
                    "'warning', 'detail', 'debug'")
-def combustionAnalyzer(video, output_dir, write_meta, crop, draw_type):
+def combustionAnalyzer(video, output_dir, write_meta, crop, draw_type, io):
     """
     Identify particles from videos of combustion via neural networks. Then track
     and analyze trajectories of particles using Kalmen filter and digraph.
@@ -72,7 +72,7 @@ def combustionAnalyzer(video, output_dir, write_meta, crop, draw_type):
     Logger.basic("Loading video ...")
     num_frames = count_frame(video)
     # We pass on the video path since each function needs its own video pointer.
-    identify(video, detection_img_dir, blobsFile, crop=crop)
+    identify(video, "gmm", detection_img_dir, blobsFile, crop=crop)
 
     Logger.basic("Reading identified particles ...")
     particles = load_text(blobsFile)
@@ -104,12 +104,9 @@ def combustionAnalyzer(video, output_dir, write_meta, crop, draw_type):
     files = [os.path.join(merged_img_dir, f) for f in files]
     generate_video(files, reproduced_video)
 
-if __name__ == "__main__":
-    combustionAnalyzer()
-
 def count_frame(video) -> int:
-    cap = cv.CaptureVideo(video)
-    num_frames = cap.get(cv.CAP_PROP_FRAME_COUNT)
+    cap = cv.VideoCapture(video)
+    num_frames = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
     cap.release()
     return num_frames
 
@@ -127,3 +124,6 @@ def set_io_level(io):
     else:
         Logger.basic("Invalid IO level: " + io + " Use warning.")
         Logger.set_io_level(Logger.WARNING)
+
+if __name__ == "__main__":
+    combustionAnalyzer()
