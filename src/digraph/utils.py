@@ -152,13 +152,13 @@ def paste_images(left_imgs: List[Image.Image], right_imgs: List[Image.Image], de
         images.append(im)
     return images
 
-def generate_video(images: List[str], output: str, fps: int = 24, 
+def generate_video(images, output: str, fps: int = 24, 
                    res: Tuple[int] = None, format: str = "avi"):
     """
         Generate video from given list of iamges.
         
         Args:
-            images: List of string representing paths of input iamges.
+            images: List[np.array] List of images in openCV format (i.e. np.array).
             output: Name of the video. If extension is given, format is ignored.
             fps: Frame rate of the video.
             res: Resolution of the video in pixel. If not given, the largest of
@@ -166,13 +166,12 @@ def generate_video(images: List[str], output: str, fps: int = 24,
             format: Format of the video. Ignored when file extension is given in
                 name.
     """
-    ims = [cv.imread(i) for i in images] # color pics are already in BGR order, not RBG
     # Collect info from images
     # If resolution not given, use maximum size of all images.
     if res == None:
         # image are numpy.ndarray. image.shape = (height, width, number of color channels)
-        max_height = max([i.shape[0] for i in ims])
-        max_width = max([i.shape[1] for i in ims])
+        max_height = max([i.shape[0] for i in images])
+        max_width = max([i.shape[1] for i in images])
         res = (max_width, max_height)
 
     if "." not in output:
@@ -180,7 +179,7 @@ def generate_video(images: List[str], output: str, fps: int = 24,
 
     fourcc = cv.VideoWriter_fourcc(*'XVID') # XVID: .avi; mp4v: .mp4
     video = cv.VideoWriter(output, fourcc, fps, res) # res is (width, height)
-    for i in ims:
+    for i in images:
         video.write(i)
     video.release() # generate video.
     cv.destroyAllWindows()

@@ -5,6 +5,7 @@ Utility functions
 
 import numpy as np
 import cv2 as cv
+from logger import Logger
 
 def imosaic(img_list, size=None, gray=False):
     '''
@@ -81,7 +82,8 @@ def drawBlobs(img, blobs):
 def writeBlobs(blobs, file, frameID):
     with open(file, "a") as f:
         for i in range(len(blobs)):
-            #print(len(blobs[i].frames))
+            #Logger.debug("Number of frames for this blob: {:d}".format(
+            #    len(blobs[i].frames)))
             x1,y1,x2,y2 = blobs[i].bbox
             x1,y1,x2,y2 = map(int,[x1,y1,x2,y2])
             w = x2 - x1

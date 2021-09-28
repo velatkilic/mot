@@ -5,6 +5,7 @@ various bounding box detection schemes
 
 import numpy as np
 import cv2 as cv
+from logger import Logger
 
 class Canny:
     def __init__(self, th1=50, th2=100, minArea=20, it_closing=1):
@@ -55,7 +56,7 @@ class GMM:
         self.crop       = crop
         self.gmm        = cv.createBackgroundSubtractorMOG2(history=history,
                                                             varThreshold=varThreshold)
-        print("Training GMM ...")
+        Logger.detail("Training GMM ...")
         self.__train()
         
     def getBbox(self,img):

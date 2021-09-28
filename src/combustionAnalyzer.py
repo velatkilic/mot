@@ -1,13 +1,16 @@
 import os
 import click
+import cv2 as cv
+from PIL import Image
+import numpy as np
+from typing import List
 
 from mot.identifier import identify
 from digraph.digraph import Digraph
 from digraph.utils import load_text, collect_images, paste_images, generate_video
 from digraph import commons
-import cv2 as cv
-
 from logger import Logger
+
 
 @click.command()
 @click.argument("video")
@@ -15,7 +18,7 @@ from logger import Logger
 @click.option("-m", "--write-meta-data", "write_meta", is_flag=True, default=True,
               help="Whether write meta-data like bbox of identified particles "\
                    "and reproduced pictures from the diagraph.")
-@click.option("-c", "--crop", default=(512, 152), type=(int, int),
+@click.option("-c", "--crop", default=(512, 512), type=(int, int),
               help="Crop sizes in x and y dimension for each video frame.")
 @click.option("-d", "--draw-type", default="plain", type=str,
               help="Modes of pictures to reproduce: 'plain', 'overlay', 'line'."\
@@ -50,9 +53,10 @@ def combustionAnalyzer(video, output_dir, write_meta, crop, draw_type, io):
     * Micro-explosion vs particle size
     * Any other anomalies
     """
-    # Outputs
+    # Initiate parameters:
     blobsFile = os.path.join(output_dir, "blobs.txt")
     reproduced_video = os.path.join(output_dir, "reproduced.avi")
+    set_io_level(io)
 
     if os.path.exists(blobsFile):
         os.remove(blobsFile)
@@ -69,8 +73,8 @@ def combustionAnalyzer(video, output_dir, write_meta, crop, draw_type, io):
     if not os.path.exists(merged_img_dir):
         os.makedirs(merged_img_dir)
 
-    Logger.basic("Loading video ...")
-    num_frames = count_frame(video)
+    Logger.basic("Identifying particles in video: {:s}".format(video))
+    num_frames = count_video_frame(video)
     # We pass on the video path since each function needs its own video pointer.
     identify(video, "gmm", detection_img_dir, blobsFile, crop=crop)
 
@@ -95,16 +99,12 @@ def combustionAnalyzer(video, output_dir, write_meta, crop, draw_type, io):
 
     Logger.basic("Reproducing video ...")
     orig_imgs = collect_images(detection_img_dir, "gmm_", "jpg", 0, num_frames - 1)
-    #rep_imgs = collect_images(reproduce_img_dir, "reproduced_", "png", 0, num_frames - 1)
-    merged_imgs = paste_images(rep_imgs, orig_imgs, merged_img_dir, write_meta)
+    merged_imgs = paste_images(orig_imgs, rep_imgs, merged_img_dir, write_meta)
 
-    # <TODO> Find whether Pillow images work with opencv
-    files = [f for f in os.listdir(merged_img_dir) if f.startswith("merged_") and f.endswith("png")]
-    files.sort(key=lambda f: int(f.replace("merged_", "").replace("." + "png", "")))
-    files = [os.path.join(merged_img_dir, f) for f in files]
-    generate_video(files, reproduced_video)
+    cv_imgs = pillow2cv(merged_imgs)
+    generate_video(cv_imgs, reproduced_video)
 
-def count_frame(video) -> int:
+def count_video_frame(video) -> int:
     cap = cv.VideoCapture(video)
     num_frames = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
     cap.release()
@@ -124,6 +124,13 @@ def set_io_level(io):
     else:
         Logger.basic("Invalid IO level: " + io + " Use warning.")
         Logger.set_io_level(Logger.WARNING)
+
+def pillow2cv(pil_imgs: List[Image.Image]):
+    """
+    Convert image object in PILLOW Image format to opencv format (numpy arrays).
+    """
+    cv_imgs = [cv.cvtColor(np.array(img), cv.COLOR_RGB2BGR) for img in pil_imgs]
+    return cv_imgs
 
 if __name__ == "__main__":
     combustionAnalyzer()
