@@ -12,15 +12,20 @@ import digraph.utils as utils
 class Digraph:
     """
         Bass type of directed graph, composed by nodes and directed trajectories.
+
+        Attributes:
+            trajs : [Trajectory] List of particles trajectories.
+            nodes : [Node]       List of nodes. I.e. events in the video
     """
 
     def __init__(self, nodes: List[Node] = None, trajs: List[Trajectory] = None):
-        self.in_nodes = {}  # "node: [nodes]" pair. The value list contains nodes that
-                            # have outgoing edges towards the key.
-        self.out_nodes = {} # "node: [nodes]" pair. The value list contains nodes that
-                            # the key node have outgoing edges pointing to.
         self.nodes = nodes if nodes != None else []
         self.trajs = trajs if trajs != None else []
+        
+        self.__in_nodes = {}  # "node: [nodes]" pair. The value list contains nodes that
+                            # have outgoing edges towards the key.
+        self.__out_nodes = {} # "node: [nodes]" pair. The value list contains nodes that
+                            # the key node have outgoing edges pointing to.
 
     def add_video(self, particles):
         """Load particles of video into digraph.
@@ -31,6 +36,7 @@ class Digraph:
         for p in particles:
             for traj in self.trajs:
                 if p.id == traj.id:
+                    # <TODO> start_node, end_node and kalmanfilter are still None.
                     traj.add_particle(p)
                     break
             else:
@@ -47,7 +53,6 @@ class Digraph:
         # 1. trajectories only exists for one time_frame, and don't exit the video. Glue them
         #    to nearest trajectories.
         self.__merge_short_trajs()
-        pass
 
         # Attach a start node and end node to each of the trajectory
         for traj in self.trajs:
@@ -59,7 +64,7 @@ class Digraph:
             end_node.add_in_traj(traj)
             self.nodes += [start_node, end_node]
 
-        # Merge nodes that represent an event.
+        # <TODO> Merge nodes in collisions and micro-explosions.
         pass
 
     def __merge_short_trajs(self):
@@ -94,36 +99,36 @@ class Digraph:
         
 
     def add_node(self, node: Node):
-        if node in self.in_nodes and node in self.out_nodes:
+        if node in self.__in_nodes and node in self.__out_nodes:
             Logger.debug("Node {:s} already in the list".format(node.to_str()))
             return
 
-        if node not in self.in_nodes:
-            self.in_nodes[node] = []
+        if node not in self.__in_nodes:
+            self.__in_nodes[node] = []
         
-        if node not in self.out_nodes:
-            self.out_nodes[node] = []
+        if node not in self.__out_nodes:
+            self.__out_nodes[node] = []
 
     def add_edge(self, start, end):
-        if start not in self.in_nodes or start not in self.out_nodes:
+        if start not in self.__in_nodes or start not in self.__out_nodes:
             Logger.warning("Trying to add an edge for a non-existing node {:s}".format(start.to_str()))
             self.add_node(start)
         
-        if end not in self.in_nodes or end not in self.out_nodes:
+        if end not in self.__in_nodes or end not in self.__out_nodes:
             Logger.warning("Trying to add an edge for a non-existing node {:s}".format(start.to_str()))
             self.add_node(end)
 
-        self.in_nodes[end].append(start)
-        self.out_nodes[start].append(end)
+        self.__in_nodes[end].append(start)
+        self.__out_nodes[start].append(end)
     
     def has_node(self, node):
-        return node in self.in_nodes or node in self.out_nodes
+        return node in self.__in_nodes or node in self.__out_nodes
     
     def has_edge(self, start, end):
         if not self.has_node(start) or not self.has_node(end):
             return False
 
-        for node in self.out_nodes[start]:
+        for node in self.__out_nodes[start]:
             if node == end:
                 return True
         
@@ -135,12 +140,12 @@ class Digraph:
 
             Note that all edges related to the node are deleted as well.
         """
-        #del self.in_nodes[node]
-        #del self.out_nodes[node]
-        #for n in self.in_nodes:
-        #    self.in_nodes[n].remove(node)
-        #for n in self.out_nodes:
-        #    self.out_nodes[n].remove(node)
+        #del self.__in_nodes[node]
+        #del self.__out_nodes[node]
+        #for n in self.__in_nodes:
+        #    self.__in_nodes[n].remove(node)
+        #for n in self.__out_nodes:
+        #    self.__out_nodes[n].remove(node)
         pass
 
     def del_edge(self, start, end):
@@ -151,17 +156,17 @@ class Digraph:
             the two nodes are not deleted. (<todo> maybe we should also delete the
             nodes that have no edges connecting to them).
         """
-        #self.in_nodes[end].remove(start)
-        #self.out_nodes[start].remove(end)
+        #self.__in_nodes[end].remove(start)
+        #self.__out_nodes[start].remove(end)
         pass
 
     def reverse(self):
         """
             Reverse the direction of all edges.
         """
-        #temp = self.in_nodes
-        #self.in_nodes = self.out_nodes
-        #self.out_nodes = temp
+        #temp = self.__in_nodes
+        #self.__in_nodes = self.__out_nodes
+        #self.__out_nodes = temp
         pass
 
 
@@ -179,6 +184,9 @@ class Digraph:
         images = []
         if write_img:
             os.makedirs(dest, exist_ok=True)
+
+        # Group entities according to associated time_frame and then draw 
+        # frame by frame.
         start_frame, end_frame = self.get_time_frames()
         dict_ptcls = {} # Dict{int: List[Particle]}
         dict_trajs = {}
@@ -202,6 +210,7 @@ class Digraph:
             else:
                 dict_nodes[node.get_start_time()] = [node]
         
+        # Drawing
         for t in range(start_frame, end_frame + 1):
             im = Image.new("RGB", commons.PIC_DIMENSION, (180, 180, 180))
             draw = ImageDraw.Draw(im)

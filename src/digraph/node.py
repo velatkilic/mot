@@ -11,17 +11,19 @@ if TYPE_CHECKING:
 class Node:
     """
         Node type of directed graph, representing events of particles, like
-        micro-explosion, collision and etc.
+        micro-explosion, collision, start and end of a eventless trajectory, and etc.
 
         Attributes:
-            ptcl_ids: list of integers for ids of particles of trajectories involved with this
-                event.
-            in_trajs: incoming trajectories.
-            out_trajs: outgoing trajectories.
-            type: a word denoting type of the node: "start", "end", "collision", "explosion"
-            start_time: time frame marking the start of the event.
-            end_time: time frame marking the end of the event.
-            position: (?) centroid of positions of all particles between the start and end time.
+            ptcl_ids    : [int]        List of particle (trajectories) ids involved 
+                                       in this event.
+            in_trajs    : [Trajectory] Incoming trajectories.
+            out_trajs   : [Trajectory] Outgoing trajectories.
+            type        : str          A word denoting type of the event: 
+                                       "start", "end", "collision", "explosion"
+            start_time  : int          Time frame marking the start of the event.
+            end_time    : int          Time frame marking the end of the event.
+            position    : [int, int]   (?) Centroid of positions of all particles 
+                                       between the start and end time.
     """
 
     def __init__(self, ptcl_ids: List[int] = None, in_trajs: List[Trajectory] = None, 

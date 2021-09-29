@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import os
 import click
 import cv2 as cv
@@ -7,7 +8,7 @@ from typing import List
 
 from mot.identifier import identify
 from digraph.digraph import Digraph
-from digraph.utils import load_text, collect_images, paste_images, generate_video
+from digraph.utils import load_blobs_from_text, collect_images, paste_images, generate_video
 from digraph import commons
 from logger import Logger
 
@@ -79,7 +80,7 @@ def combustionAnalyzer(video, output_dir, write_meta, crop, draw_type, io):
     identify(video, "gmm", detection_img_dir, blobsFile, crop=crop)
 
     Logger.basic("Reading identified particles ...")
-    particles = load_text(blobsFile)
+    particles = load_blobs_from_text(blobsFile)
 
     Logger.detail("Loading particles into digraph ...")
     dg = Digraph()

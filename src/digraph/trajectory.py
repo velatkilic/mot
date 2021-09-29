@@ -17,28 +17,28 @@ class Trajectory:
         time frame.
 
         Attributes:
-            id: particle id of the underlying particle.
-            ptcls: Particle of same ID at different time frames.
-            kalmanfilter: The kalmanfilter that can predict position of underlying particle
-                after the end_time.
-            start_node: Node marking the start of the trajectory. It could be that the particle
-                rises from an event, it for first time enter the image, or it exists at the 
-                beginning of the video.
-            end_node: Node marking the end of the trajectory. It could be that the particle 
-                leaves the image, the video ends, or an event happenes.
-            start_time: The time frame the underlying particle is firstly detected.
-            end_time: The time frame the underlying paritcle is lastly detected.
-            velocity: The average velocity averaged over all time frames.
+            id            : particle id of the underlying particle.
+            ptcls         : Particle of same ID at different time frames.
+            kalmanfilter  : The kalmanfilter that can predict position of underlying particle
+                            after the end_time.
+            start_node    : Node marking the start of the trajectory. It could be that the particle
+                            emerges from an event, it just enters the video, or this node is the
+                            beginning of the video.
+            end_node      : Node marking the end of the trajectory. It could be that the particle 
+                            leaves the image, the video ends, or an event happenes.
+            start_time    : The time frame the underlying particle is firstly detected.
+            end_time      : The time frame the underlying paritcle is lastly detected.
+            velocity      : The average velocity averaged over all time frames.
         
         Notes：
-        1. self.ptcls should be sorted in ascending order of time frames. The last one in the list 
-        is the one with highest value of time frame.
+        1. self.ptcls should be sorted in ascending order of time_frame. The last one in the list 
+        is the one exists later in the video.
         2. self.id is the only necessary argument for the constructor. All the other attributes
         can be added afterwards.
 
     """
 
-    def __init__(self, id, ptcls: List[Particle], kalmanfilter= None,
+    def __init__(self, id, ptcls: List[Particle] = None, kalmanfilter = None,
                  start_node: Node = None, end_node: Node = None):
         """
 
@@ -56,12 +56,14 @@ class Trajectory:
         self.velocity = float("nan")
 
         # Status flag.
-        self.sorted = False
+        self.__sorted = False
 
     def add_particles(self, particles: List[Particle], merge: bool = False) -> bool:
         ptcls_backup = copy.deepcopy(self.ptcls)
         for p in particles:
             if not self.add_particle(p, merge):
+                Logger.error("Fail to add particle {:d} into trajectory {:d}".format(
+                    p.get_id(), self.id))
                 self.ptcls = ptcls_backup
                 return False
         return True
@@ -89,9 +91,8 @@ class Trajectory:
                                "{:d} {:d} {:d}".format(particle.time_frame, self.id, particle.id))
                 return False
             else:
-                Logger.detail(
-                    "Merge new particle of different id to this trajectory: " +
-                    "{:3d} {:3d}".format(particle.id, self.id))
+                Logger.detail("Force merging new particle of different id to this trajectory: " +
+                              "{:3d} {:3d}".format(particle.id, self.id))
                 particle.set_id(self.id)
         
         self.ptcls.append(particle)
@@ -110,22 +111,22 @@ class Trajectory:
 
             Enforce a re-sort even if the list has been sorted.
         """
-        if len(self.ptcls) > 0:
+        if self.ptcls != None and len(self.ptcls) > 0:
             list.sort(self.ptcls, key=lambda p: p.get_time_frame()) # in-place sort
             self.start_time = self.ptcls[0].time_frame
             self.end_time = self.ptcls[-1].time_frame
         else:
-            Logger.warning("Trajectory is empty.")
+            Logger.debug("Sorted an empty trajectory {:d}".format(self.id))
             self.start_time = 0
             self.end_time = 0
-        self.sorted = True
+        self.__sorted = True
 
     # Post-processing functions
-    def is_sorted(self):
+    def __is_sorted(self):
         return self.sorted
 
     def get_start_time(self) -> int:
-        if not self.is_sorted():
+        if not self.__is_sorted():
             self.sort_particles()
         return self.start_time
 
@@ -133,7 +134,7 @@ class Trajectory:
         """
             The last time frame that the underlying particle exists in the video. Inclusive.
         """
-        if not self.is_sorted():
+        if not self.__is_sorted():
             self.sort_particles()
         return self.end_time
 
@@ -141,7 +142,7 @@ class Trajectory:
         return self.get_end_time() - self.get_start_time() + 1
     
     def get_start_position(self) -> List[float]:
-        if not self.is_sorted:
+        if not self.__is_sorted():
             self.sort_particles()
         if len(self.ptcls) > 0:
             return self.ptcls[0].position
@@ -149,7 +150,7 @@ class Trajectory:
             return None
 
     def get_end_position(self) -> List[float]:
-        if not self.is_sorted:
+        if not self.__is_sorted():
             self.sort_particles()
         if len(self.ptcls) > 0:
             return self.ptcls[-1].position
@@ -173,7 +174,7 @@ class Trajectory:
                 snapshot.append(copy.deepcopy(p))
         return snapshot
 
-    def get_particle(self, time: int) -> Particle:
+    def get_particle_by_frame(self, time: int) -> Particle:
         self.sort_particles()
         if time < self.start_time or time > self.end_time:
             Logger.error("Specified time is outside the life time of the trajectory: " + \
@@ -203,7 +204,9 @@ class Trajectory:
             p2 = self.ptcls[i]
             if p1.time_frame == p2.time_frame:
                 # Multiple particles exists for the same time frame.
-                Logger.error("Something is wrong this trajectory: {:d}".format(self.id))
+                Logger.error("Fail to calculate velocity. Multiple particles " \
+                             "exist in this trajectory at the same time frame: " \
+                             "{:d}".format(self.id))
                 continue
             velocities.append(ptcl_distance(p1, p2) / (p2.time_frame - p1.time_frame))
         if len(velocities) > 0:
@@ -226,7 +229,7 @@ class Trajectory:
         self.start_time = 0
         self.end_time = 0
         self.velocity = 0.0
-        self.sorted = False
+        self.__sorted = False
 
     def __str__(self) -> str:
         string = "Trajectory: Particle id: {:3d}; ".format(self.id) + \
