@@ -123,7 +123,7 @@ class Trajectory:
 
     # Post-processing functions
     def __is_sorted(self):
-        return self.sorted
+        return self.__sorted
 
     def get_start_time(self) -> int:
         if not self.__is_sorted():
@@ -190,6 +190,16 @@ class Trajectory:
     
     def get_particles(self) -> List[Particle]:
         return self.ptcls
+
+    def get_start_particle(self) -> Particle:
+        if not self.__is_sorted:
+            self.sort_particles()
+        return self.ptcls[0]
+    
+    def get_end_particle(self) -> Particle:
+        if not self.__is_sorted:
+            self.sort_particles()
+        return self.ptcls[-1]
 
     def get_velocity(self) -> float:
         """

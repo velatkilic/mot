@@ -45,7 +45,16 @@ class Particle:
         self.position = position
     
     def get_position(self):
+        """
+        Return the upper left position of bbox.
+        """
         return self.position
+
+    def get_center_position(self):
+        """
+        Return the position of the center of bbox.
+        """
+        return [self.position[0] + self.bbox[0] / 2, self.position[1] + self.bbox[1] / 2]
 
     def set_bbox(self, bbox):
         self.bbox = bbox

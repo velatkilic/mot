@@ -6,6 +6,7 @@ from PIL import Image, ImageDraw
 from logger import Logger
 from digraph.node import Node
 from digraph.trajectory import Trajectory
+from digraph.particle import Particle
 import digraph.commons as commons
 import digraph.utils as utils
 
@@ -16,11 +17,16 @@ class Digraph:
         Attributes:
             trajs : [Trajectory] List of particles trajectories.
             nodes : [Node]       List of nodes. I.e. events in the video
+            ptcls : [Particles]  List of particles. Not necessary, but useful for
+                                 accessing all particles and performing particle-wise
+                                 detection and anlysis, like bubble and shape detection.
     """
 
-    def __init__(self, nodes: List[Node] = None, trajs: List[Trajectory] = None):
-        self.nodes = nodes if nodes != None else []
-        self.trajs = trajs if trajs != None else []
+    def __init__(self, nodes: List[Node] = [], trajs: List[Trajectory] = [],
+                 ptcls: List[Particle] = [],):
+        self.nodes = nodes
+        self.trajs = trajs
+        self.ptcls = ptcls
         
         self.__in_nodes = {}  # "node: [nodes]" pair. The value list contains nodes that
                             # have outgoing edges towards the key.
@@ -34,13 +40,15 @@ class Digraph:
             data: List of all particles identified in all frames of a video.
         """
         for p in particles:
+            if p not in self.ptcls:
+                self.ptcls.append(p)
             for traj in self.trajs:
                 if p.id == traj.id:
                     # <TODO> start_node, end_node and kalmanfilter are still None.
                     traj.add_particle(p)
                     break
             else:
-                # this particle doesn't belong to any existing trajectories
+                # This particle doesn't belong to any existing trajs. Create a new traj.
                 traj = Trajectory(id = p.id, ptcls = [p])
                 #node = Node()
                 #traj.set_start_node(node)
@@ -65,6 +73,7 @@ class Digraph:
             self.nodes += [start_node, end_node]
 
         # <TODO> Merge nodes in collisions and micro-explosions.
+        self.__detect_events()
         pass
 
     def __merge_short_trajs(self):
@@ -97,6 +106,12 @@ class Digraph:
                         self.nodes.remove(st.end_node)
                     break
         
+    def __detect_events():
+        """
+        Loop repeatively to merge nodes into events: collision and micro-explosion.
+        """
+        # TODO
+        pass
 
     def add_node(self, node: Node):
         if node in self.__in_nodes and node in self.__out_nodes:
@@ -133,6 +148,10 @@ class Digraph:
                 return True
         
         return False
+
+    def get_particles(self):
+        """A window for accessing directly all identified particles in the digraph."""
+        return self.ptcls
 
     def del_node(self, node):
         """
