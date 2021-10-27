@@ -11,17 +11,19 @@ if TYPE_CHECKING:
 class Node:
     """
         Node type of directed graph, representing events of particles, like
-        micro-explosion, collision and etc.
+        micro-explosion, collision, start and end of a eventless trajectory, and etc.
 
         Attributes:
-            ptcl_ids: list of integers for ids of particles of trajectories involved with this
-                event.
-            in_trajs: incoming trajectories.
-            out_trajs: outgoing trajectories.
-            type: a word denoting type of the node: "start", "end", "collision", "explosion"
-            start_time: time frame marking the start of the event.
-            end_time: time frame marking the end of the event.
-            position: (?) centroid of positions of all particles between the start and end time.
+            ptcl_ids    : [int]        List of particle (trajectories) ids involved 
+                                       in this event.
+            in_trajs    : [Trajectory] Incoming trajectories.
+            out_trajs   : [Trajectory] Outgoing trajectories.
+            type        : str          A word denoting type of the event: 
+                                       "start", "end", "collision", "explosion"
+            start_time  : int          Time frame marking the start of the event.
+            end_time    : int          Time frame marking the end of the event.
+            position    : [int, int]   (?) Centroid of positions of all particles 
+                                       between the start and end time.
     """
 
     def __init__(self, ptcl_ids: List[int] = None, in_trajs: List[Trajectory] = None, 
@@ -39,15 +41,31 @@ class Node:
                                                 # "start", "end", "explosion", "collision"
         self.start_time = -1
         self.end_time = -1
-        #self.position = [0.0, 0.0]
+        self.position = None
         self.bbox_xy = None                     # upper-left and lower-right cornor of bbox
 
-    #def get_position(self):
-    #    return self.position
+    def add_in_traj(self, traj):
+        self.in_trajs.append(traj)
+        if traj.id not in self.ptcl_ids:
+            self.ptcl_ids.append(traj.id)
+        self.reset()
+    
+    def add_out_traj(self, traj):
+        self.out_trajs.append(traj)
+        if traj.id not in self.ptcl_ids:
+            self.ptcl_ids.append(traj.id)
+        self.reset()
 
     def get_start_time(self):
+        """
+        Earliest time of all involved trajectories. Consider incoming trajectories first.
+        
+        Assume incoming trajectories have earliest end times earlier than earliest start times of
+        outgoing trajectories.
+        """
+        # Test cases to consider: 1 in_traj, 2 in_traj, 1 out_traj, 2 out_traj, 2 in_traj and 2 out_traj.
         if self.start_time == -1:
-            # Update start time from current set of nodes.
+            # Update start time from current set of trajs.
             _time = sys.maxsize
             for traj in self.in_trajs:
                 # earliest end time of incoming trajectories.
@@ -60,6 +78,13 @@ class Node:
         return self.start_time
     
     def get_end_time(self):
+        """
+        Latest time of all involved trajectories. Consider outgoing trajectories first.
+
+        Assume largest start time of outgoing trajectories is larger than largest end time of 
+        incomning trajectories.
+        """
+        # Test cases to consider: 1 out_traj, 2 out_traj, 1 in_traj, 2 in_traj, 2 in_traj and 2 out_traj.
         if self.end_time == -1:
             # Update end time from current set of nodes.
             _time = -1
@@ -73,6 +98,27 @@ class Node:
             self.end_time = _time
         return self.end_time
     
+    def get_position(self):
+        """
+        Return bbox-size-weighted center position of underlying particles of all trajectories, 
+        including both incoming and outgoing ones.
+
+        Retun None if underlying trajectories are empty.
+
+        Note: not weighted by width and height of particle bbox.
+        """
+        if self.position == None:
+            total_size = 0
+            total_x = total_y = .0
+            for trajs in self.in_trajs + self.out_trajs:
+                p = trajs.get_end_particle()
+                total_size += p.get_size()
+                total_x += p.get_size() * p.get_center_position()[0]
+                total_y += p.get_size() * p.get_center_position()[1]
+            if total_size != 0:
+                self.position = [total_x / total_size, total_y / total_size]
+        return self.position
+
     def get_bbox(self) -> List[Tuple[int]]: 
         """
             Get the boundary coordinates of all starting and end positions of trajectories.
@@ -97,7 +143,7 @@ class Node:
             _lowerright_x = pos[0] if _lowerright_x < pos[0] else _lowerright_x
             _lowerright_y = pos[1] if _lowerright_y < pos[1] else _lowerright_y
         
-        # <todo>: Temporary. For node having only one trajectory, give them a default 20 pixel box 
+        # TODO: Temporary. For node having only one trajectory, give them a default 20 pixel box 
         # size.
         _default_box_size = 20
         if self.get_type() == "end": _default_box_size = 15
@@ -122,29 +168,18 @@ class Node:
             self.type = "explosion"
         elif len(self.in_trajs) > 1 and len(self.out_trajs) > 1:
             self.type = "collision"
-            # check whether it is crossing instead of collision.
-            # <todo>
+            # TODO: check whether it is crossing instead of collision.
         return self.type
-
-    def add_in_traj(self, traj):
-        self.in_trajs.append(traj)
-        if traj.id not in self.ptcl_ids:
-            self.ptcl_ids.append(traj.id)
-        self.reset()
-    
-    def add_out_traj(self, traj):
-        self.out_trajs.append(traj)
-        if traj.id not in self.ptcl_ids:
-            self.ptcl_ids.append(traj.id)
-        self.reset()
 
     def reset(self):
         """
-            Reset post-processed properties of the node. Used when new trajectories are connected
-            to the node.
+            Reset post-processed properties of the node (like start_time, end_time, and type). 
+            
+            Used when new trajectories are connected to the node.
         """
         self.start_time = -1
         self.end_time = -1
+        self.position = None
         self.type = None
         self.bbox_xy = None
 
@@ -158,8 +193,8 @@ class Node:
 
     def __str__(self):
         """
-            Print an identifier of the node.
-            <todo>
+        Print an identifier of the node.
+        TODO: improve
         """
         string = "Node: Incoming trajectories id: "
         for traj in self.in_trajs:

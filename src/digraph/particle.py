@@ -1,10 +1,24 @@
 from typing import Sized, List
 
 class Particle:
-    """Particles recorded in combustion videos."""
+    """Particles recorded in combustion videos.
+    
+    Attributes:
+        id             : int        ID of a particle
+        time_frame     : int        Frame number of a particle in the video. It's used
+                                    as time unit in the diagraph.
+        position       : [int, int] x, y positions in pixels of the upper left 
+                                    corner of bbox
+        predicted_pos  : [int, int] Kalmen filter predicted x, y positions in pixels
+                                    of the upper left corner of bbox
+        bbox           : [int, int] Weight and height in pixels of the bbox
+        bubble         : Particle   Partible object representing the bubble. It only 
+                                    needs position, bbox.
+    """
 
-    def __init__(self, id, time_frame, position: List[float], \
-                 predicted_pos: List[float]=[0,0], bbox = [0, 0], bubble=False):
+    def __init__(self, id, time_frame, position: List[int], \
+                 predicted_pos: List[int]=[0,0], bbox = [0, 0],
+                 bubble=None):
         self.id = id
         self.time_frame = time_frame
         self.position = position
@@ -31,7 +45,16 @@ class Particle:
         self.position = position
     
     def get_position(self):
+        """
+        Return the upper left position of bbox.
+        """
         return self.position
+
+    def get_center_position(self):
+        """
+        Return the position of the center of bbox.
+        """
+        return [self.position[0] + self.bbox[0] / 2, self.position[1] + self.bbox[1] / 2]
 
     def set_bbox(self, bbox):
         self.bbox = bbox
@@ -47,14 +70,14 @@ class Particle:
         self.bubble = bubble
     
     def has_bubble(self):
-        return self.bubble
+        return self.bubble == None
 
     def __str__(self) -> str:
         string = "Particle_id : {:4d}; Time_frame: {:4d}; ".format(self.id, self.time_frame) + \
                  "(x, y): ({:5.1f}, {:5.1f}); ".format(self.position[0], self.position[1]) + \
                  "Predicted (x, y): ({:5.1f}, {:5.1f}); ".format(self.predict_pos[0], 
-                                                                   self.predict_pos[1]) + \
-                 "Has_bubble: {:5s}".format(str(self.bubble))
+                                                                 self.predict_pos[1]) + \
+                 "Has_bubble: {:5s}".format(str(self.bubble == None))
         return string
     
     def __repr__(self) -> str:

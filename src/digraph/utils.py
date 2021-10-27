@@ -69,7 +69,7 @@ def traj_distance(t1, t2) -> float:
                     break
         return min_dist
 
-def load_excel(file_name: str) -> List[Particle]:
+def load_blobs_from_excel(file_name: str) -> List[Particle]:
     """ A temporary io function to load data from Kerri-Lee's excel data.
 
     The function assumes a specific format of the excel data, and will be replaced by more 
@@ -101,18 +101,20 @@ def load_excel(file_name: str) -> List[Particle]:
     
     return particles
 
-def load_text(file_name: str) -> List[Particle]:
+def load_blobs_from_text(file_name: str) -> List[Particle]:
     particles = []
     with open(file_name, "r") as f:
         for line in f:
             terms = line.replace(" ", "").split(",")
             terms = [int(term) for term in terms]
-            # <TODO> Add length check to prevent array out of size error
-            position = [terms[0], terms[1]]   # x1, y1
-            bbox = [terms[4], terms[5]]       # width, height
-            idx = terms[6]
-            time_frame = terms[7]
-            particles.append(Particle(idx, time_frame, position, bbox=bbox))
+            if len(terms) < 8:
+                Logger.warning("Invalid blob info: {:s}".format(line))
+            else:
+                position = [terms[0], terms[1]]   # x1, y1
+                bbox = [terms[4], terms[5]]       # width, height
+                idx = terms[6]
+                time_frame = terms[7]
+                particles.append(Particle(idx, time_frame, position, bbox=bbox))
     return particles
 
 def collect_images(dir: str, prefix: str, ext: str, start: int, end: int) \

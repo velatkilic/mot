@@ -1,26 +1,38 @@
 from typing import List, Tuple
 import os
+from pathlib import Path
 import copy
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 from logger import Logger
 from digraph.node import Node
 from digraph.trajectory import Trajectory
+from digraph.particle import Particle
 import digraph.commons as commons
 import digraph.utils as utils
 
 class Digraph:
     """
         Bass type of directed graph, composed by nodes and directed trajectories.
+
+        Attributes:
+            trajs : [Trajectory] List of particles trajectories.
+            nodes : [Node]       List of nodes. I.e. events in the video
+            ptcls : [Particles]  List of particles. Not necessary, but useful for
+                                 accessing all particles and performing particle-wise
+                                 detection and anlysis, like bubble and shape detection.
     """
 
-    def __init__(self, nodes: List[Node] = None, trajs: List[Trajectory] = None):
-        self.in_nodes = {}  # "node: [nodes]" pair. The value list contains nodes that
+    def __init__(self, nodes: List[Node] = [], trajs: List[Trajectory] = [],
+                 ptcls: List[Particle] = [],):
+        self.nodes = nodes
+        self.trajs = trajs
+        self.ptcls = ptcls
+        
+        self.__in_nodes = {}  # "node: [nodes]" pair. The value list contains nodes that
                             # have outgoing edges towards the key.
-        self.out_nodes = {} # "node: [nodes]" pair. The value list contains nodes that
+        self.__out_nodes = {} # "node: [nodes]" pair. The value list contains nodes that
                             # the key node have outgoing edges pointing to.
-        self.nodes = nodes if nodes != None else []
-        self.trajs = trajs if trajs != None else []
 
     def add_video(self, particles):
         """Load particles of video into digraph.
@@ -29,12 +41,15 @@ class Digraph:
             data: List of all particles identified in all frames of a video.
         """
         for p in particles:
+            if p not in self.ptcls:
+                self.ptcls.append(p)
             for traj in self.trajs:
                 if p.id == traj.id:
+                    # <TODO> start_node, end_node and kalmanfilter are still None.
                     traj.add_particle(p)
                     break
             else:
-                # this particle doesn't belong to any existing trajectories
+                # This particle doesn't belong to any existing trajs. Create a new traj.
                 traj = Trajectory(id = p.id, ptcls = [p])
                 #node = Node()
                 #traj.set_start_node(node)
@@ -47,7 +62,6 @@ class Digraph:
         # 1. trajectories only exists for one time_frame, and don't exit the video. Glue them
         #    to nearest trajectories.
         self.__merge_short_trajs()
-        pass
 
         # Attach a start node and end node to each of the trajectory
         for traj in self.trajs:
@@ -59,7 +73,8 @@ class Digraph:
             end_node.add_in_traj(traj)
             self.nodes += [start_node, end_node]
 
-        # Merge nodes that represent an event.
+        # <TODO> Merge nodes in collisions and micro-explosions.
+        self.__detect_events()
         pass
 
     def __merge_short_trajs(self):
@@ -92,42 +107,52 @@ class Digraph:
                         self.nodes.remove(st.end_node)
                     break
         
+    def __detect_events(self):
+        """
+        Loop repeatively to merge nodes into events: collision and micro-explosion.
+        """
+        # TODO
+        pass
 
     def add_node(self, node: Node):
-        if node in self.in_nodes and node in self.out_nodes:
+        if node in self.__in_nodes and node in self.__out_nodes:
             Logger.debug("Node {:s} already in the list".format(node.to_str()))
             return
 
-        if node not in self.in_nodes:
-            self.in_nodes[node] = []
+        if node not in self.__in_nodes:
+            self.__in_nodes[node] = []
         
-        if node not in self.out_nodes:
-            self.out_nodes[node] = []
+        if node not in self.__out_nodes:
+            self.__out_nodes[node] = []
 
     def add_edge(self, start, end):
-        if start not in self.in_nodes or start not in self.out_nodes:
+        if start not in self.__in_nodes or start not in self.__out_nodes:
             Logger.warning("Trying to add an edge for a non-existing node {:s}".format(start.to_str()))
             self.add_node(start)
         
-        if end not in self.in_nodes or end not in self.out_nodes:
+        if end not in self.__in_nodes or end not in self.__out_nodes:
             Logger.warning("Trying to add an edge for a non-existing node {:s}".format(start.to_str()))
             self.add_node(end)
 
-        self.in_nodes[end].append(start)
-        self.out_nodes[start].append(end)
+        self.__in_nodes[end].append(start)
+        self.__out_nodes[start].append(end)
     
     def has_node(self, node):
-        return node in self.in_nodes or node in self.out_nodes
+        return node in self.__in_nodes or node in self.__out_nodes
     
     def has_edge(self, start, end):
         if not self.has_node(start) or not self.has_node(end):
             return False
 
-        for node in self.out_nodes[start]:
+        for node in self.__out_nodes[start]:
             if node == end:
                 return True
         
         return False
+
+    def get_particles(self):
+        """A window for accessing directly all identified particles in the digraph."""
+        return self.ptcls
 
     def del_node(self, node):
         """
@@ -135,12 +160,12 @@ class Digraph:
 
             Note that all edges related to the node are deleted as well.
         """
-        #del self.in_nodes[node]
-        #del self.out_nodes[node]
-        #for n in self.in_nodes:
-        #    self.in_nodes[n].remove(node)
-        #for n in self.out_nodes:
-        #    self.out_nodes[n].remove(node)
+        #del self.__in_nodes[node]
+        #del self.__out_nodes[node]
+        #for n in self.__in_nodes:
+        #    self.__in_nodes[n].remove(node)
+        #for n in self.__out_nodes:
+        #    self.__out_nodes[n].remove(node)
         pass
 
     def del_edge(self, start, end):
@@ -151,27 +176,28 @@ class Digraph:
             the two nodes are not deleted. (<todo> maybe we should also delete the
             nodes that have no edges connecting to them).
         """
-        #self.in_nodes[end].remove(start)
-        #self.out_nodes[start].remove(end)
+        #self.__in_nodes[end].remove(start)
+        #self.__out_nodes[start].remove(end)
         pass
 
     def reverse(self):
         """
             Reverse the direction of all edges.
         """
-        #temp = self.in_nodes
-        #self.in_nodes = self.out_nodes
-        #self.out_nodes = temp
+        #temp = self.__in_nodes
+        #self.__in_nodes = self.__out_nodes
+        #self.__out_nodes = temp
         pass
 
 
-    def draw(self, dest, write_img=True) -> List[Image.Image]:
+    def draw(self, dest, write_img=True, draw_id=False) -> List[Image.Image]:
         """
             Draw trajectories and nodes in pictures. One picture for each time frame.
 
             Args:
                 dest      : String  Path of the folder to put the drawings.
                 write_img : Boolean Flag controlling whether to write images.
+                draw_id   : Boolean Whether draw particle id on top right corner of bbox.
             Returns:
                 A list of Image objects representing reproduced frames from the digraph
                 representation.
@@ -179,6 +205,9 @@ class Digraph:
         images = []
         if write_img:
             os.makedirs(dest, exist_ok=True)
+
+        # Group entities according to associated time_frame and then draw 
+        # frame by frame.
         start_frame, end_frame = self.get_time_frames()
         dict_ptcls = {} # Dict{int: List[Particle]}
         dict_trajs = {}
@@ -202,6 +231,7 @@ class Digraph:
             else:
                 dict_nodes[node.get_start_time()] = [node]
         
+        # Drawing
         for t in range(start_frame, end_frame + 1):
             im = Image.new("RGB", commons.PIC_DIMENSION, (180, 180, 180))
             draw = ImageDraw.Draw(im)
@@ -225,12 +255,18 @@ class Digraph:
                     xy = [(p.position[0], p.position[1]),
                           (p.position[0] + p.box[0], p.position[1] + p.box[1])]
                     draw.rectangle(xy, outline=(50, 50, 50), width = 5) # dark gray
+                    if draw_id:
+                        text_xy = (p.position[0] + p.box[0] + 5, p.position[1] - 5)
+                        lib_path = Path(os.path.realpath(__file__)).parent.parent.parent \
+                                .absolute().joinpath("lib").joinpath("arial.ttf")
+                        font = ImageFont.truetype(str(lib_path), size=16)
+                        draw.text(text_xy, str(p.get_id()), (255, 0, 0), font = font) # Id number in red.
             if write_img:
                 im.save("{:s}/reproduced_{:d}.png".format(dest, t)) # JPG doesn't support alpha
             images.append(im)
         return images
     
-    def draw_overlay(self, dest, write_img):
+    def draw_overlay(self, dest, write_img, draw_id=False):
         """
         Similar to what draw() does, except that particles of all frames are drawn on the same
         picture, thus "overlay".
@@ -294,7 +330,7 @@ class Digraph:
             images.append(im.copy())
         return images
 
-    def draw_line_format(self, dest, write_img):
+    def draw_line_format(self, dest, write_img, draw_id=False):
         """
             Draw trajectories and nodes in pictures with trajectories represented by
             piecewise lines connecting the underlying particle at different time frame and with

@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import os
 import click
 import cv2 as cv
@@ -7,7 +8,7 @@ from typing import List
 
 from mot.identifier import identify
 from digraph.digraph import Digraph
-from digraph.utils import load_text, collect_images, paste_images, generate_video
+from digraph.utils import load_blobs_from_text, collect_images, paste_images, generate_video
 from digraph import commons
 from logger import Logger
 
@@ -28,7 +29,8 @@ from logger import Logger
 @click.option("-o", "--io", default="warning", type=str,
               help="IO level. Available options are: 'quiet', 'baisc' "\
                    "'warning', 'detail', 'debug'")
-def combustionAnalyzer(video, output_dir, write_meta, crop, draw_type, io):
+@click.option("-v", "--verbose", is_flag=True, default=False)
+def combustionAnalyzer(video, output_dir, write_meta, crop, draw_type, io, verbose):
     """
     Identify particles from videos of combustion via neural networks. Then track
     and analyze trajectories of particles using Kalmen filter and digraph.
@@ -79,23 +81,27 @@ def combustionAnalyzer(video, output_dir, write_meta, crop, draw_type, io):
     identify(video, "gmm", detection_img_dir, blobsFile, crop=crop)
 
     Logger.basic("Reading identified particles ...")
-    particles = load_text(blobsFile)
+    particles = load_blobs_from_text(blobsFile)
 
     Logger.detail("Loading particles into digraph ...")
     dg = Digraph()
     commons.PIC_DIMENSION = crop
     dg.add_video(particles) # Load particles identified in the video.
 
+    if verbose:
+        Logger.basic("Detailed information of digraph: \n" + str(dg))
+
     Logger.basic("Drawing reproduced images ...")
+    draw_id = True if verbose else False
     if draw_type.lower() == "plain":
-        rep_imgs = dg.draw(reproduce_img_dir, write_meta)
+        rep_imgs = dg.draw(reproduce_img_dir, write_meta, draw_id)
     elif draw_type.lower() == "overlay":
-        rep_imgs = dg.draw_overlay(reproduce_img_dir, write_meta)
+        rep_imgs = dg.draw_overlay(reproduce_img_dir, write_meta, draw_id)
     elif draw_type.lower() == "line":
-        rep_imgs = dg.draw_line_format(reproduce_img_dir, write_meta)
+        rep_imgs = dg.draw_line_format(reproduce_img_dir, write_meta, draw_id)
     else:
         Logger.warning("Invalid drawing mode: " + draw_type + " Use plain.")
-        rep_imgs = dg.draw(reproduce_img_dir, write_meta)
+        rep_imgs = dg.draw(reproduce_img_dir, write_meta, draw_id)
 
     Logger.basic("Reproducing video ...")
     orig_imgs = collect_images(detection_img_dir, "gmm_", "jpg", 0, num_frames - 1)
