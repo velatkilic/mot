@@ -193,8 +193,8 @@ class Node:
 
     def __str__(self):
         """
-            Print an identifier of the node.
-            <todo>
+        Print an identifier of the node.
+        TODO: improve
         """
         string = "Node: Incoming trajectories id: "
         for traj in self.in_trajs:

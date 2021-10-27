@@ -205,23 +205,35 @@ class Trajectory:
         """
             Calculate and return the average velocity averaged over velocities at all time 
             frames of the underlying particle.
+
+            TODO: Deal with single time-frame trajectory.
         """
-        if not self.sorted:
+        if not self.__sorted:
             self.sort_particles()
         velocities = []
-        for i in range(1, len(self.ptcls)):
-            p1 = self.ptcls[i - 1]
-            p2 = self.ptcls[i]
-            if p1.time_frame == p2.time_frame:
-                # Multiple particles exists for the same time frame.
-                Logger.error("Fail to calculate velocity. Multiple particles " \
-                             "exist in this trajectory at the same time frame: " \
-                             "{:d}".format(self.id))
-                continue
-            velocities.append(ptcl_distance(p1, p2) / (p2.time_frame - p1.time_frame))
+        if len(self.ptcls) > 1:
+            for i in range(1, len(self.ptcls)):
+                p1 = self.ptcls[i - 1]
+                p2 = self.ptcls[i]
+                if p1.time_frame == p2.time_frame:
+                    # Multiple particles exists for the same time frame.
+                    Logger.error("Fail to calculate velocity. Multiple particles " \
+                                "exist in this trajectory at the same time frame: " \
+                                "{:d}".format(self.id))
+                    continue
+                velocities.append(ptcl_distance(p1, p2) / (p2.time_frame - p1.time_frame))
         if len(velocities) > 0:
             self.velocity = np.average(velocities)
         return self.velocity
+    
+    def get_average_particle_size(self) -> float:
+        """
+        Average the particle size over all time frames.
+        """
+        sum = 0
+        for p in self.ptcls:
+            sum += p.get_size()
+        return sum / len(self.ptcls)
 
     def predict_next_location(self) -> List[float]:
         """
@@ -245,5 +257,6 @@ class Trajectory:
         string = "Trajectory: Particle id: {:3d}; ".format(self.id) + \
                  "Start time: {:4d}; ".format(self.get_start_time()) + \
                  "End time: {:4d}; ".format(self.get_end_time()) + \
+                 "Average size: {:5.2f}; ".format(self.get_average_particle_size()) + \
                  "Average velocity: {:5.2f}".format(self.get_velocity())
         return string
