@@ -1,4 +1,5 @@
 __pycache__
 boxes
 test.mp4
-test*
+tests/data/*
+tests/_trial_temp
