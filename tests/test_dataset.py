@@ -8,7 +8,7 @@ class MyTestCase(unittest.TestCase):
         fnam = os.path.join(os.getcwd(), "data/test.mp4")
         dset = Dataset(fnam)
         img  = dset.get_img(0)
-        self.assertEqual(True, True)  # add assertion here
+        self.assertIsNotNone(img)
 
 
 if __name__ == '__main__':
