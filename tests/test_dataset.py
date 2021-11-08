@@ -15,7 +15,3 @@ class TestDataset(unittest.TestCase):
 
     def test_dataset_length(self):
         self.assertGreater(self.dset.length(), 0)
-
-
-if __name__ == '__main__':
-    unittest.main()

@@ -1,2 +1,7 @@
+numpy
+scipy
+torch
+detectron2
+opencv-contrib-python
 imageio
 imageio-ffmpeg
