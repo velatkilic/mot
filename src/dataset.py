@@ -12,5 +12,7 @@ class Dataset:
         img = self.reader.get_data(idx)
         if self.crop is not None:
             img = img[self.crop[0]:self.crop[2], self.crop[1]:self.crop[3], ...]
-
         return img
+
+    def length(self):
+        return self.reader.count_frames()
