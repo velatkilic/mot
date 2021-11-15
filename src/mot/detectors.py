@@ -7,12 +7,7 @@ import os
 import numpy as np
 import cv2 as cv
 from src.logger import Logger
-
-from detectron2 import model_zoo
-from detectron2.engine import DefaultPredictor, DefaultTrainer
-from detectron2.config import get_cfg
-from detectron2.utils.visualizer import Visualizer
-from detectron2.data import MetadataCatalog, DatasetCatalog
+import scipy.io as sio
 
 class Canny:
     def __init__(self, th1=50, th2=100, minArea=20, it_closing=1):
@@ -93,3 +88,12 @@ class GMM:
             gray = gray[0:self.crop[0],0:self.crop[1]]
             self.gmm.apply(gray)
         self.cap.release()
+
+class DNN:
+    def __init__(self, fname="/video/fused_boxes/"):
+        self.fname = fname
+
+    def getBbo(self, idx):
+        dat = sio.loadmat(cwd + self.fname + "frame" + str(idx) + ".mat")
+        bbox = dat["bbox"]
+    return bbox
