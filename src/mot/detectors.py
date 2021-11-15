@@ -93,7 +93,7 @@ class DNN:
     def __init__(self, fname="/video/fused_boxes/"):
         self.fname = fname
 
-    def getBbo(self, idx):
+    def getBbox(self, idx):
         dat = sio.loadmat(cwd + self.fname + "frame" + str(idx) + ".mat")
         bbox = dat["bbox"]
     return bbox
