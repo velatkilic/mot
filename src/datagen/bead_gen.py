@@ -11,8 +11,7 @@ class Beads:
         self.numbeadsMin = numbeadsMin
         self.sigma = sigma
 
-
-    def genSample(self):
+    def gen_sample(self):
         numbeads = np.random.randint(self.numbeadsMin, self.numbeadsMax)
         beadrad = (self.beadradMax - self.beadradMin) * np.random.rand(numbeads, 1) + self.beadradMin
 

@@ -6,10 +6,10 @@ Human in the loop
 import cv2 as cv
 import numpy as np
 
-from mot.utils import imosaic, drawBox, findClosestBox, drawBlobs, writeBlobs
-from mot.kalman import MOT
-from mot.detectors import Canny, GMM
-from logger import Logger
+from src.mot.utils import imosaic, drawBox, findClosestBox, drawBlobs, writeBlobs
+from src.mot.kalman import MOT
+from src.mot.detectors import Canny, GMM
+from src.logger import Logger
 
 
 def identify(fname, model, imgOutDir, blobsOutFile, control=False, crop=(512, 512)):
@@ -30,7 +30,7 @@ def identify(fname, model, imgOutDir, blobsOutFile, control=False, crop=(512, 51
     if model == "canny":
         det = Canny()
     elif model == "gmm":
-        det = GMM(fname,crop)
+        det = GMM(fname, crop)
     else:
         Logger.warning("Invalid model name. Pick either gmm or canny")
         det = GMM(fname,crop)

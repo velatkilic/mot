@@ -1,10 +1,11 @@
 import imageio
+from src.logger import Logger
 
 
 class Dataset:
     def __init__(self, filename=None, crop=None):
         if filename is None:
-            print("Error: STUB use logger")
+            Logger.error("Filename cannot be empty")
         self.crop = crop
         self.reader = imageio.get_reader(filename)
 

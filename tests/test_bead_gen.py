@@ -7,7 +7,7 @@ class TestBeads(unittest.TestCase):
         self.bead = Beads()
 
     def test_gen_sample(self):
-        img, seg, bbox = self.bead.genSample()
+        img, seg, bbox = self.bead.gen_sample()
         self.assertIsNotNone(img)
         self.assertIsNotNone(seg)
         self.assertIsNotNone(bbox)
