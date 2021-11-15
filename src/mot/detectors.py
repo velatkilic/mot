@@ -16,7 +16,7 @@ class Canny:
         self.minArea    = minArea
         self.it_closing = it_closing
 
-    def getBbox(self, img):
+    def predict(self, img):
         # convert to grayscale
         gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
 
@@ -61,7 +61,7 @@ class GMM:
         Logger.detail("Training GMM ...")
         self.__train()
 
-    def getBbox(self,img):
+    def predict(self,img):
         gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
         mask = self.gmm.apply(gray)
         # Morphological transformation: closing
@@ -94,6 +94,6 @@ class DNN:
         self.fname = fname
 
     def getBbox(self, idx):
-        dat = sio.loadmat(cwd + self.fname + "frame" + str(idx) + ".mat")
+        dat = sio.loadmat(os.getcwd() + self.fname + "frame" + str(idx) + ".mat")
         bbox = dat["bbox"]
-    return bbox
+        return bbox

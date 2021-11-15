@@ -10,3 +10,5 @@ crefi
 pycocotools
 Pillow
 click
+matplotlib
+scikit-image

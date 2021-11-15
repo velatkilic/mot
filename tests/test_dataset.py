@@ -4,14 +4,20 @@ import os
 
 
 class TestDataset(unittest.TestCase):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fnam = os.path.join(os.getcwd(), "data/test.mp4")
-        self.dset = Dataset(self.fnam)
 
-    def test_read_frame(self):
-        img = self.dset.get_img(0)
+    def test_read_frame_mp4(self):
+        fnam = os.path.join(os.getcwd(), "data/test.mp4")
+        dset = Dataset(video_name=fnam)
+        img = dset.get_img(0)
+        self.assertIsNotNone(img)
+
+    def test_read_frame_avi(self):
+        fnam = os.path.join(os.getcwd(), "data/playback_test300AlZr.avi")
+        dset = Dataset(video_name=fnam)
+        img = dset.get_img(0)
         self.assertIsNotNone(img)
 
     def test_dataset_length(self):
-        self.assertGreater(self.dset.length(), 0)
+        fnam = os.path.join(os.getcwd(), "data/playback_test300AlZr.avi")
+        dset = Dataset(video_name=fnam)
+        self.assertGreater(dset.length(), 0)
