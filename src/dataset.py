@@ -11,6 +11,7 @@ class Dataset:
             self.reader = imread_collection(image_folder, conserve_memory=False)
         else:
             Logger.error("Video name or image folder cannot both be empty")
+        self.image_folder = image_folder
         self.video_name = video_name
         self.crop = crop
 
@@ -27,5 +28,7 @@ class Dataset:
     def length(self):
         if self.video_name is not None:
             return self.reader.count_frames()
-        else:
+        elif self.image_folder is not None:
             return len(self.reader)
+        else:
+            return 0
