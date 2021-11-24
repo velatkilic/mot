@@ -10,7 +10,7 @@ class TestDNN(TestCase):
         dset = Dataset(video_name=fnam)
 
         # DNN
-        fname = os.path.join(os.getcwd(), "data/model_final.pth")
+        fname = os.path.join(os.getcwd(), "data/")
         dnn = DNN(fname=fname, dset=dset)
         bbox, mask = dnn.predict(0)
         self.assertIsNotNone(bbox)

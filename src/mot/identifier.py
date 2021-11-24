@@ -31,7 +31,7 @@ def identify(fname, model, imgOutDir, blobsOutFile, crop=(512, 512)):
         
         # Show final image
         #cv.imshow("Frame", cont)
-        cv.imwrite("{:s}/{:s}_{:d}.jpg".format(imgOutDir, model, i), cont)
+        cv.imwrite("{:s}/dnn_{:d}.jpg".format(imgOutDir, i), cont)
         
         # Kalman tracking
         if i == 0:

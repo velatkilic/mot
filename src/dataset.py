@@ -1,10 +1,11 @@
 import imageio
 from skimage.io import imread_collection
 from src.logger import Logger
+import cv2 as cv
 
 
 class Dataset:
-    def __init__(self, video_name=None, crop=None, image_folder=None):
+    def __init__(self, video_name=None, crop=None, image_folder=None, gray=False):
         if video_name is not None:
             self.reader = imageio.get_reader(video_name)
         elif image_folder is not None:
@@ -14,6 +15,7 @@ class Dataset:
         self.image_folder = image_folder
         self.video_name = video_name
         self.crop = crop
+        self.gray=gray
 
     def get_img(self, idx):
         if self.video_name is not None:
@@ -23,6 +25,10 @@ class Dataset:
 
         if self.crop is not None:
             img = img[self.crop[0]:self.crop[2], self.crop[1]:self.crop[3], ...]
+
+        if self.gray:
+            img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+
         return img
 
     def length(self):

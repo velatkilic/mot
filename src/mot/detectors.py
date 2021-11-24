@@ -13,6 +13,8 @@ from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
 from detectron2 import model_zoo
 
+import pickle
+
 
 class DNN:
     def __init__(self, fname=None, dset=None, th_speed=0.2, th_dist=2):
@@ -24,15 +26,18 @@ class DNN:
 
         self.dset = dset
         # Config
-        cfg = get_cfg()
-        cfg.INPUT.MASK_FORMAT = "bitmask"
-        cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
-        cfg.DATALOADER.NUM_WORKERS = 2
-        cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128  # region of interest (ROI) head batchsize
-        cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only particle class
-        cfg.MODEL.WEIGHTS = fname # path to the model we just trained
-        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.3  # set a custom testing threshold, (smaller leads to more detections)
-        cfg.MODEL.ROI_HEADS.NMS_THRESH_TEST = 0.5  # non-max suppression threshold
+        with open(fname + "cfg.pkl", "rb") as file:
+            cfg = pickle.load(file)
+        # cfg = get_cfg()
+        # cfg.INPUT.MASK_FORMAT = "bitmask"
+        # cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
+        # cfg.DATALOADER.NUM_WORKERS = 2
+        # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128  # region of interest (ROI) head batchsize
+        # cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only particle class
+        # cfg.MODEL.WEIGHTS = fname # path to the model we just trained
+        # cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.6  # set a custom testing threshold, (smaller leads to more detections)
+        # cfg.MODEL.ROI_HEADS.NMS_THRESH_TEST = 0.5  # non-max suppression threshold
+        cfg.merge_from_list(["MODEL.WEIGHTS", fname+"model_final.pth"])
         self.predictor = DefaultPredictor(cfg)  # create predictor from the config
 
         # optic flow merge params

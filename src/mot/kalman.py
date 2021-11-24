@@ -7,7 +7,7 @@ import cv2 as cv
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
-from mot.utils import cen2cor, cor2cen, costCalc, unionBlob, iom
+from src.mot.utils import cen2cor, cor2cen, costCalc, unionBlob, iom
 
 class Blob:
     """
