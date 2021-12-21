@@ -48,7 +48,7 @@ class Particle:
         """
         Return the upper left position of bbox.
         """
-        return self.position
+        return self.position # TODO: make deepcopy
 
     def get_center_position(self):
         """

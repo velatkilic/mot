@@ -56,6 +56,12 @@ class Node:
             self.ptcl_ids.append(traj.id)
         self.reset()
 
+    def get_out_trajs(self):
+        return self.out_trajs
+
+    def get_in_trajs(self):
+        return self.in_trajs
+
     def get_start_time(self):
         """
         Earliest time of all involved trajectories. Consider incoming trajectories first.
@@ -131,13 +137,13 @@ class Node:
         _lowerright_x = 0
         _lowerright_y = 0
         for traj in self.in_trajs:
-            pos = traj.get_end_position()
+            pos = traj.get_position_end()
             _upperleft_x = pos[0] if _upperleft_x > pos[0] else _upperleft_x
             _upperleft_y = pos[1] if _upperleft_y > pos[1] else _upperleft_y
             _lowerright_x = pos[0] if _lowerright_x < pos[0] else _lowerright_x
             _lowerright_y = pos[1] if _lowerright_y < pos[1] else _lowerright_y
         for traj in self.out_trajs:
-            pos = traj.get_start_position()
+            pos = traj.get_position_start()
             _upperleft_x = pos[0] if _upperleft_x > pos[0] else _upperleft_x
             _upperleft_y = pos[1] if _upperleft_y > pos[1] else _upperleft_y
             _lowerright_x = pos[0] if _lowerright_x < pos[0] else _lowerright_x
@@ -164,11 +170,15 @@ class Node:
             self.type = "start"
         elif len(self.in_trajs) == 1 and len(self.out_trajs) == 0:
             self.type = "end"
-        elif len(self.in_trajs) == 1 and len(self.out_trajs) > 1:
-            self.type = "explosion"
+        elif len(self.in_trajs) >= 0 and len(self.out_trajs) > 1:
+            self.type = "micro-explosion"
         elif len(self.in_trajs) > 1 and len(self.out_trajs) > 1:
             self.type = "collision"
             # TODO: check whether it is crossing instead of collision.
+        elif len(self.in_trajs) == 1 and len(self.out_trajs) == 1:
+            self.type = "other same_ptcl"
+        else:
+            self.type = "other"
         return self.type
 
     def reset(self):
@@ -196,12 +206,15 @@ class Node:
         Print an identifier of the node.
         TODO: improve
         """
-        string = "Node: Incoming trajectories id: "
-        for traj in self.in_trajs:
-            string += str(traj.id) + ","
-        string = string.strip(",") + "; "
+        string = "Node: Type: {:15s}; Incoming trajectories id: ".format(self.get_type())
+        string += "{:16s}".format(",".join([str(traj.id) for traj in self.in_trajs]))
         string += "Outgoing trajectories id: "
-        for traj in self.out_trajs:
-            string += str(traj.id) + ","
-        string = string.strip(",")
+        string += "{:16s}".format(",".join([str(traj.id) for traj in self.out_trajs]))
+        #for traj in self.in_trajs:
+        #    string += str(traj.id) + ","
+        #string = string.strip(",") + "; "
+        #string += "Outgoing trajectories id: "
+        #for traj in self.out_trajs:
+        #    string += str(traj.id) + ","
+        #string = string.strip(",")
         return string

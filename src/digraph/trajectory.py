@@ -4,7 +4,7 @@ import numpy as np
 import copy
 import digraph.commons as commons
 from logger import Logger
-from digraph.utils import ptcl_distance
+from digraph.utils import ptcl_distance, BACK_TRACE_LIMIT
 
 if TYPE_CHECKING:
     from node import Node
@@ -49,17 +49,20 @@ class Trajectory:
         self.start_node = start_node
         self.end_node = end_node
         
+        # helper variables
+        self.ptcl_time_map = {}
+
         # Post-processed properties. They should not be set in constructor, but be extracted 
         # after the trajectory is fully built.
         self.start_time = 0 
         self.end_time = 0
-        self.velocity = float("nan")
+        self.velocity = float("nan")    # Average velocity over entire existence.
 
         # Status flag.
         self.__sorted = False
 
     def add_particles(self, particles: List[Particle], merge: bool = False) -> bool:
-        ptcls_backup = copy.deepcopy(self.ptcls)
+        ptcls_backup = copy.deepcopy(self.ptcls) # TODO: improve memory efficiency
         for p in particles:
             if not self.add_particle(p, merge):
                 Logger.error("Fail to add particle {:d} into trajectory {:d}".format(
@@ -96,7 +99,9 @@ class Trajectory:
                 particle.set_id(self.id)
         
         self.ptcls.append(particle)
-        self.reset()
+        self.ptcl_time_map[particle.get_time_frame()] = particle
+        if self.__sorted:
+            self.reset()
         return True
 
     def set_start_node(self, node):
@@ -107,7 +112,7 @@ class Trajectory:
     
     def sort_particles(self):
         """
-            Sort self.ptcls in ascending order of time frames.
+            Sort self.ptcls in ascending order of time frames. (-1 is the last frame)
 
             Enforce a re-sort even if the list has been sorted.
         """
@@ -125,6 +130,15 @@ class Trajectory:
     def __is_sorted(self):
         return self.__sorted
 
+    def get_id(self) -> int:
+        return self.id
+
+    def get_start_node(self):
+        return self.start_node
+    
+    def get_end_node(self):
+        return self.end_node
+
     def get_start_time(self) -> int:
         if not self.__is_sorted():
             self.sort_particles()
@@ -141,7 +155,12 @@ class Trajectory:
     def get_life_time(self) -> int:
         return self.get_end_time() - self.get_start_time() + 1
     
-    def get_start_position(self) -> List[float]:
+    # TODO: Use get_position_by_time to simplify code.
+    def get_position_start(self) -> List[float]:
+        """
+        Return:
+            [float, float] Position of the underlying particle at the start of the trajectory.
+        """
         if not self.__is_sorted():
             self.sort_particles()
         if len(self.ptcls) > 0:
@@ -149,12 +168,58 @@ class Trajectory:
         else:
             return None
 
-    def get_end_position(self) -> List[float]:
+    def get_position_end(self) -> List[float]:
         if not self.__is_sorted():
             self.sort_particles()
         if len(self.ptcls) > 0:
             return self.ptcls[-1].position
         else:
+            return None
+    
+    def get_position_by_time(self, time: int) -> List[float]:
+        """
+        Get position of underlying particle at specified time.
+
+        Attribute:
+            time    int     Desired time frame.
+
+        Return:
+            [float, float]  Position of particle at frame "time". None if not exist at the time.
+        """
+        if time in self.ptcl_time_map.keys():
+            return self.ptcl_time_map[time].get_position()
+        elif len(self.ptcls) < 2:
+            Logger.debug("Cannot backtrace or predict position for trajectory eixsting for " \
+                         "only one frame.")
+            return None
+        elif min(self.ptcl_time_map.keys()) - time <= BACK_TRACE_LIMIT:
+            # Back trace to estimate positions in past time (no more than 2 time frames).
+            Logger.debug("Backtrace position of trajectory-{:d} at frame-{:d}.".format(self.id, time))
+            # Use instant velocity at the first two frames to backtrace positions
+            if not self.__is_sorted():
+                self.sort_particles()
+            p1 = self.ptcls[0].get_position()
+            p2 = self.ptcls[1].get_position() # Later in time
+            delta_t = self.ptcls[1].get_time_frame() - self.ptcls[0].get_time_frame()
+            return_position = [0, 0]
+            return_position[0] = p1[0] - (p2[0] - p1[0]) / delta_t * (self.ptcls[0].get_time_frame() - time)
+            return_position[1] = p1[1] - (p2[1] - p1[1]) / delta_t * (self.ptcls[0].get_time_frame() - time)
+            return return_position
+        elif time - max(self.ptcl_time_map.keys()) <= BACK_TRACE_LIMIT:  # Not very likely to be needed.
+            # Forward trace to predict positions of particles in a future time.
+            Logger.debug("Predict position of trajectory-{:d} at frame-{:d}.".format(self.id, time))
+            # Use instant velocity at the last two frames to predict positions
+            if not self.__is_sorted():
+                self.sort_particles()
+            p1 = self.ptcls[-1].get_position()
+            p2 = self.ptcls[-2].get_position() # Earlier in time
+            delta_t = self.ptcls[-1].get_time_frame() - self.ptcls[-2].get_time_frame()
+            return_position = [0, 0]
+            return_position[0] = p1[0] + (p1[0] - p2[0]) / delta_t * (time - self.ptcls[-1].get_time_frame())
+            return_position[1] = p1[1] + (p1[1] - p2[1]) / delta_t * (time - self.ptcls[-1].get_time_frame())
+            return return_position
+        else:
+            Logger.debug("Cannot backtrace trajectory-{:d} at frame-{:d}. Exceed allowed limit.")
             return None
     
     def has_particle(self, time: int) -> bool:
@@ -210,7 +275,7 @@ class Trajectory:
         """
         if not self.__sorted:
             self.sort_particles()
-        velocities = []
+        velocities = []    # TODO: memory efficiency
         if len(self.ptcls) > 1:
             for i in range(1, len(self.ptcls)):
                 p1 = self.ptcls[i - 1]
@@ -257,6 +322,6 @@ class Trajectory:
         string = "Trajectory: Particle id: {:3d}; ".format(self.id) + \
                  "Start time: {:4d}; ".format(self.get_start_time()) + \
                  "End time: {:4d}; ".format(self.get_end_time()) + \
-                 "Average size: {:5.2f}; ".format(self.get_average_particle_size()) + \
-                 "Average velocity: {:5.2f}".format(self.get_velocity())
+                 "Average size: {:6.2f}; ".format(self.get_average_particle_size()) + \
+                 "Average velocity: {:6.2f}".format(self.get_velocity())
         return string

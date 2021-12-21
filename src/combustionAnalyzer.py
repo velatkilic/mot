@@ -27,7 +27,7 @@ from logger import Logger
                    "'overlay' means particles of all frames are drawn on the same picture."\
                    "'line' means particles are drawn in lines to emphasize trajectories.")
 @click.option("-o", "--io", default="warning", type=str,
-              help="IO level. Available options are: 'quiet', 'baisc' "\
+              help="IO level. Available options are: 'quiet', 'basic' "\
                    "'warning', 'detail', 'debug'")
 @click.option("-v", "--verbose", is_flag=True, default=False)
 def combustionAnalyzer(video, output_dir, write_meta, crop, draw_type, io, verbose):
@@ -88,8 +88,7 @@ def combustionAnalyzer(video, output_dir, write_meta, crop, draw_type, io, verbo
     commons.PIC_DIMENSION = crop
     dg.add_video(particles) # Load particles identified in the video.
 
-    if verbose:
-        Logger.basic("Detailed information of digraph: \n" + str(dg))
+    Logger.detail("Detailed information of digraph: \n" + str(dg))
 
     Logger.basic("Drawing reproduced images ...")
     draw_id = True if verbose else False

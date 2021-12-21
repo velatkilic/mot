@@ -10,6 +10,7 @@ from digraph.trajectory import Trajectory
 from digraph.particle import Particle
 import digraph.commons as commons
 import digraph.utils as utils
+from digraph.utils import BACK_TRACE_LIMIT
 
 class Digraph:
     """
@@ -30,9 +31,9 @@ class Digraph:
         self.ptcls = ptcls
         
         self.__in_nodes = {}  # "node: [nodes]" pair. The value list contains nodes that
-                            # have outgoing edges towards the key.
+                              # have outgoing edges towards the key.
         self.__out_nodes = {} # "node: [nodes]" pair. The value list contains nodes that
-                            # the key node have outgoing edges pointing to.
+                              # the key node have outgoing edges pointing to.
 
     def add_video(self, particles):
         """Load particles of video into digraph.
@@ -86,9 +87,9 @@ class Digraph:
         long_trajs: List[Trajectory] = []
         for traj in self.trajs:
             if traj.get_life_time() <= 5:
-                short_trajs.append(traj)
+                short_trajs.append(traj)    # TODO: not memory efficient. Improve this.
             else:
-                long_trajs.append(traj)
+                long_trajs.append(traj)     # TODO: not memory efficient. Improve this.
         for st in short_trajs:
             for lt in long_trajs:
                 dist = utils.traj_distance(st, lt)
@@ -111,8 +112,75 @@ class Digraph:
         """
         Loop repeatively to merge nodes into events: collision and micro-explosion.
         """
-        # TODO
-        pass
+        # micro-explosion
+        sorted_trajs = []
+        event_times = set([])
+        for traj in self.trajs:
+            if traj.get_start_time() == 0:      # Cannot check events happen exactly at the beginning of the video.
+                continue
+            sorted_trajs.append(traj)
+        sorted_trajs.sort(key=lambda t: t.get_start_time())
+        trajs_start_merged = []     # Trajectories whose start node has been merged with earlier trajs
+        trajs_end_merged = []       # Trajectories whose end node has been merged with later trajs
+        for i in range(len(sorted_trajs)):
+            t_i = sorted_trajs[i]
+            event_time = t_i.get_start_time()
+            # Check trajectories that start later than the current trajectory.
+            if t_i in trajs_start_merged:
+                continue
+            for j in range(i + 1, len(sorted_trajs)):
+                t_j = sorted_trajs[j]
+                if t_j in trajs_start_merged:
+                    continue
+                if t_j.get_start_time() - event_time <= BACK_TRACE_LIMIT and \
+                   t_j.get_position_by_time(event_time) != None:
+                    dist = utils.distance(t_i.get_position_by_time(event_time),
+                                          t_j.get_position_by_time(event_time))
+                    if dist <= utils.CLOSE_IN_SPACE:
+                        # Close in both space and time, merge.
+                        Logger.debug("Event detected: merge start nodes of " \
+                                     "trajectories: {:d} {:d}".format(t_i.get_id(), t_j.get_id()))
+                        trajs_start_merged.append(t_j)
+                        temp_node = t_j.get_start_node()
+                        self.nodes.remove(temp_node)
+                        # TODO: remove references from self.__in_nodes and self.__out_nodes.
+                        # Or recreate them after the merge complete.
+                        # self.__out_nodes.remove(t_j.get_start_node())
+                        t_j.set_start_node(t_i.get_start_node())
+                        for t in temp_node.get_out_trajs():        # TODO: collect them into a function. e.g. merge_nodes()
+                            t_i.get_start_node().add_out_traj(t)
+                        for t in temp_node.get_in_trajs():
+                            t_i.get_start_node().add_in_traj(t)
+                        event_times.add(event_time)
+            # Check trajectories that might end at the start time of the current trajectory.
+            for k in range(0, i):
+                t_k = sorted_trajs[k]
+                if t_k in trajs_end_merged:
+                    # The end node of t_k has been merged with ealier start nodes of other trajectory.
+                    # Don't need to be tested with 
+                    continue
+                if abs(t_k.get_end_time() - event_time) <= BACK_TRACE_LIMIT and \
+                   t_k.get_position_by_time(event_time) != None:
+                    dist = utils.distance(t_i.get_position_by_time(event_time),
+                                          t_k.get_position_by_time(event_time))
+                    if dist <= utils.CLOSE_IN_SPACE:
+                        Logger.debug("Event detected: merge start node and end node of "\
+                                     "trajectories: {:d} {:d}".format(t_i.get_id(), t_k.get_id()))
+                        trajs_end_merged.append(t_k)
+                        temp_node = t_k.get_end_node()
+                        self.nodes.remove(temp_node)
+                        t_k.set_end_node(t_i.get_start_node())
+                        for t in temp_node.get_in_trajs():
+                            t_i.get_start_node().add_in_traj(t)
+                        for t in temp_node.get_out_trajs():
+                            t_i.get_start_node().add_out_traj(t)
+                        event_times.add(event_time)
+                        # TODO: deal with self.__in_nodes and self.__out_nodes
+        # TODO: Change event_times to map of time and positions.
+        # TODO: Split trajectories that pass the event position at exactly the event time.
+        #       They could be new particles but accidently inherited the old trajectory.
+        pass   
+        
 
     def add_node(self, node: Node):
         if node in self.__in_nodes and node in self.__out_nodes:

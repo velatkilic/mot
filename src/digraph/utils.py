@@ -9,8 +9,12 @@ import cv2 as cv
 from logger import Logger
 from digraph.particle import Particle
 
-CLOSE_IN_TIME = 10
+CLOSE_IN_TIME = 3
 CLOSE_IN_SPACE = 40
+#EVENT_TIME_WINDOW = 3   # Span of time frames allowed between trajectory start times 
+#                        # to be considered as candidates for events.
+BACK_TRACE_LIMIT = 3    # Time frames before the start of a trajectory allowed to 
+                        # estimate position at.
 
 def distance(a: List[float], b: List[float]) -> float:
     """L2 norm of vectors of any dimension."""
@@ -42,12 +46,12 @@ def traj_distance(t1, t2) -> float:
     t2.sort_particles()
     if t1.get_end_time() < t2.get_start_time():
         if t2.get_start_time() - t1.get_end_time() <= CLOSE_IN_TIME:
-            return distance(t1.get_end_position(), t2.get_start_position())
+            return distance(t1.get_position_end(), t2.get_position_start())
         else:
             return float("inf")
     elif t1.get_start_time() > t2.get_end_time():
         if t1.get_start_time() - t2.get_end_time() <= CLOSE_IN_TIME:
-            return distance(t1.get_start_position(), t2.get_end_position())
+            return distance(t1.get_position_start(), t2.get_position_end())
         else:
             return float("inf")
     else:
