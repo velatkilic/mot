@@ -1,0 +1,14 @@
+numpy
+scipy
+torch
+torchvision
+detectron2
+opencv-contrib-python
+imageio
+imageio-ffmpeg
+crefi
+pycocotools
+Pillow
+click
+matplotlib
+scikit-image

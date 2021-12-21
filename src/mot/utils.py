@@ -5,7 +5,7 @@ Utility functions
 
 import numpy as np
 import cv2 as cv
-from logger import Logger
+from src.logger import Logger
 
 def imosaic(img_list, size=None, gray=False):
     '''
@@ -256,3 +256,125 @@ def unionBlob(blob1, blob2):
     # stub
     # modify frames and dead 
     return blob1
+
+
+def unionMask(mask1, mask2):
+    # Returns the union of two binary input masks
+    out = np.logical_or(mask1, mask2)
+    return out.tolist()
+
+
+def unionBox(bbox1, bbox2):
+    # Returns the union of two input bounding boxes
+    # bboxes have coordinates in (x1,y1,x2,y2) format
+
+    # Min of top left corner
+    x1 = np.minimum(bbox1[0], bbox2[0])
+    y1 = np.minimum(bbox1[1], bbox2[1])
+
+    # Max of bottom right corner
+    x2 = np.maximum(bbox1[2], bbox2[2])
+    y2 = np.maximum(bbox1[3], bbox2[3])
+
+    return [x1, y1, x2, y2]
+
+
+def intersect(bbox1, bbox2):
+    x1 = max(bbox1[0], bbox2[0])
+    y1 = max(bbox1[1], bbox2[1])
+    x2 = min(bbox1[2], bbox2[2])
+    y2 = min(bbox1[3], bbox2[3])
+    return (max(0, x2 - x1 + 1.) * max(0, y2 - y1 + 1.)) > 0
+
+def calcDist(bbox1,bbox2):
+    cen1 = np.array([bbox1[0] + bbox1[2],bbox1[1] + bbox1[3]]) / 2.
+    cen2 = np.array([bbox2[0] + bbox2[2],bbox2[1] + bbox2[3]]) / 2.
+    dist = np.sqrt((cen1[0] - cen2[0])**2 + (cen1[1] - cen2[1])**2)
+    return dist
+
+def calcHW(bbox):
+    h = abs(bbox[0] - bbox[2])
+    w = abs(bbox[1] - bbox[3])
+    return h, w
+
+def calcDistMetric(bbox1, bbox2):
+    dist  = calcDist(bbox1,bbox2)
+    h1,w1 = calcHW(bbox1)
+    h2,w2 = calcHW(bbox2)
+    metr  = (dist**2)/(h1*w1) + (dist**2)/(h2*w2)
+    return metr
+
+def mergeBoxes(mask, bbox, speed, mag, max_speed, th_speed, th_dist, it):
+    # create new lists
+    mask_new = mask.tolist()
+    bbox_new = bbox.tolist()
+    speed_new = speed.tolist()
+
+    for i in range(it):
+
+        cursor_left = 0
+        cursor_right = 0
+        length = len(bbox_new)
+        cnt = 0
+        while (cursor_left < length):
+            cursor_right = cursor_left + 1
+            while (cursor_right < length):
+                # relative speed
+                speed1 = speed_new[cursor_left]
+                speed2 = speed_new[cursor_right]
+                rel_speed = abs(2. * (speed2 - speed1) / (speed2 + speed1))
+
+                # get bounding boxes
+                bbox1 = bbox_new[cursor_left]
+                bbox2 = bbox_new[cursor_right]
+                metric = calcDistMetric(bbox1, bbox2)
+
+                # masks
+                mask1 = mask_new[cursor_left]
+                mask2 = mask_new[cursor_right]
+
+                # merge
+                ds = ((metric < th_dist) or intersect(bbox1, bbox2))
+                if (rel_speed < th_speed) and ds:
+                    # merge segmentation mask
+                    mask_new[cursor_left] = unionMask(mask1, mask2)
+
+                    # merge bounding boxes
+                    bbox_new[cursor_left] = unionBox(bbox1, bbox2)
+
+                    # calculate new speed
+                    speed_new[cursor_left] = np.mean(mag[mask_new[cursor_left]]) / max_speed
+
+                    # pop merged data from lists
+                    mask_new.pop(cursor_right)
+                    bbox_new.pop(cursor_right)
+                    speed_new.pop(cursor_right)
+                    length = length - 1  # adjust length of the list
+
+                    cnt += 1  # keep track of total merged boxes
+                else:
+                    cursor_right = cursor_right + 1
+
+                # # Debug
+                # bbox_temp  = [bbox_new[cursor_left], bbox_new[cursor_right-1]]
+                # speed_temp = [speed_new[cursor_left], speed_new[cursor_right-1]]
+                # print("Relative speed: " + str(rel_speed))
+                # print("Metric: " + str(metric))
+                # img = drawBox(frame2[0:crop,0:crop,:].copy(), bbox_temp, speed_temp)
+                # if (rel_speed < th_speed) and ds: print("merged")
+                # cv.imshow("Under study", img)
+                # k = cv.waitKey(0)& 0xff
+                # if k ==27:
+                #     cap.release()
+                #     cv.destroyAllWindows()
+                #     exit()
+
+            cursor_left = cursor_left + 1
+
+        # print("# of merged boxes: " + str(cnt))
+
+    mask_new = np.asarray(mask_new)
+    bbox_new = np.asarray(bbox_new)
+    speed_new = np.asarray(speed_new)
+
+    return mask_new, bbox_new, speed_new
