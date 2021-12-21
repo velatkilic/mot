@@ -6,21 +6,24 @@ from PIL import Image
 import numpy as np
 from typing import List
 
-from mot.identifier import identify
-from digraph.digraph import Digraph
-from digraph.utils import load_blobs_from_text, collect_images, paste_images, generate_video
-from digraph import commons
-from logger import Logger
-
+from src.mot.identifier import identify
+from src.digraph.digraph import Digraph
+from src.digraph.utils import load_blobs_from_text, collect_images, paste_images, generate_video
+from src.digraph import commons
+from src.logger import Logger
 
 @click.command()
 @click.argument("video")
+@click.argument("model")
+@click.argument("param_dir")
 @click.argument("output_dir")
 @click.option("-m", "--write-meta-data", "write_meta", is_flag=True, default=True,
               help="Whether write meta-data like bbox of identified particles "\
                    "and reproduced pictures from the diagraph.")
-@click.option("-c", "--crop", default=(512, 512), type=(int, int),
-              help="Crop sizes in x and y dimension for each video frame.")
+@click.option("-c", "--crop", default=(0, 0, 512, 512), type=(int, int, int, int),
+              help="Crop sizes by coordinates of top-left and bottom-right corners" 
+                   "for each video frame.")
+@click.option("-g", "--gpu/--no-gpu", is_flag=True, default=True, help="Wehter use GPU in pyTorch")
 @click.option("-d", "--draw-type", default="plain", type=str,
               help="Modes of pictures to reproduce: 'plain', 'overlay', 'line'."\
                    "'plain' means regular picture with particles drawn as circles filling bbox."\
@@ -30,10 +33,10 @@ from logger import Logger
               help="IO level. Available options are: 'quiet', 'basic' "\
                    "'warning', 'detail', 'debug'")
 @click.option("-v", "--verbose", is_flag=True, default=False)
-def combustionAnalyzer(video, output_dir, write_meta, crop, draw_type, io, verbose):
+def combustionAnalyzer(video, model, param_dir, output_dir, write_meta, crop, gpu, draw_type, io, verbose):
     """
-    Identify particles from videos of combustion via neural networks. Then track
-    and analyze trajectories of particles using Kalmen filter and digraph.
+    Identify particles from videos of combustion via a specified MODEL using parameters in PARAM_DIR. 
+    Then track and analyze trajectories of particles using Kalmen filter and digraph.
 
     Read VIDEO as input and write particle informations and reproduced video
     in OUTPUT_DIR/blobs.txt and OUTPUT_DIR/reproduced.avi. Additional meta-data
@@ -78,14 +81,14 @@ def combustionAnalyzer(video, output_dir, write_meta, crop, draw_type, io, verbo
     Logger.basic("Identifying particles in video: {:s}".format(video))
     num_frames = count_video_frame(video)
     # We pass on the video path since each function needs its own video pointer.
-    identify(video, "gmm", detection_img_dir, blobsFile, crop=crop)
+    identify(video, model, detection_img_dir, blobsFile, paramDir=param_dir, gpu=gpu, crop=crop)
 
     Logger.basic("Reading identified particles ...")
     particles = load_blobs_from_text(blobsFile)
 
     Logger.detail("Loading particles into digraph ...")
     dg = Digraph()
-    commons.PIC_DIMENSION = crop
+    commons.PIC_DIMENSION = [crop[1], crop[3]]
     dg.add_video(particles) # Load particles identified in the video.
 
     Logger.detail("Detailed information of digraph: \n" + str(dg))

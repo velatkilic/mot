@@ -12,22 +12,26 @@ from src.dataset import Dataset
 from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
 from detectron2 import model_zoo
+import torch
 
 import pickle
 
 
 class DNN:
-    def __init__(self, fname=None, dset=None, th_speed=0.2, th_dist=2):
+    def __init__(self, fname=None, dset=None, gpu=True, th_speed=0.2, th_dist=2):
         if dset is None:
             Logger.error("Dataset cannot be empty")
 
         if fname is None:
             Logger.error("Training not implemented yet. STUB")
-
+        
         self.dset = dset
         # Config
-        with open(fname + "cfg.pkl", "rb") as file:
+        with open(os.path.join(fname, "cfg.pkl"), "rb") as file:
             cfg = pickle.load(file)
+        
+        if not gpu:
+            cfg.MODEL.DEVICE="cpu"
         # cfg = get_cfg()
         # cfg.INPUT.MASK_FORMAT = "bitmask"
         # cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
@@ -37,7 +41,7 @@ class DNN:
         # cfg.MODEL.WEIGHTS = fname # path to the model we just trained
         # cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.6  # set a custom testing threshold, (smaller leads to more detections)
         # cfg.MODEL.ROI_HEADS.NMS_THRESH_TEST = 0.5  # non-max suppression threshold
-        cfg.merge_from_list(["MODEL.WEIGHTS", fname+"model_final.pth"])
+        cfg.merge_from_list(["MODEL.WEIGHTS", os.path.join(fname, "model_final.pth")])
         self.predictor = DefaultPredictor(cfg)  # create predictor from the config
 
         # optic flow merge params
