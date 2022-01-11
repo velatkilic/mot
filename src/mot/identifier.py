@@ -12,7 +12,7 @@ def identify(fname, model, imgOutDir, blobsOutFile, crop=(512, 512)):
 
     Attributes:
         fname         : String  Path to the video
-        model         : String  Path to the DNN weights
+        model         : String  Path to the DNN weights and config file
         imgOutDir     : String  Output folder of images with bounding boxes.
         blobsOutFile  : String  Output file for info of each identified particle.
         crop          : (int, int) Cropping sizes in x and y dimension.
