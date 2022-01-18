@@ -12,7 +12,7 @@ def identify(fname, modeltype, imgOutDir, blobsOutFile, paramDir="data", gpu=Tru
 
     Attributes:
         fname         : String  Path to the video
-        modeltype     : String  Path to the DNN weights
+        modeltype     : String  Type of model: dnn, gmm, or canny.
         imgOutDir     : String  Output folder of images with bounding boxes.
         blobsOutFile  : String  Output file for info of each identified particle.
         crop          : (int, int) Cropping sizes in x and y dimension.
@@ -23,6 +23,7 @@ def identify(fname, modeltype, imgOutDir, blobsOutFile, paramDir="data", gpu=Tru
     detector = None
     if modeltype.lower() == "dnn":
         detector  = DNN(dset=dset, fname=paramDir, gpu=gpu)
+    # Add back gmm and canny.
 
     Logger.detail("Detecting particles ...")
     for i in range(dset.length()):
@@ -42,5 +43,5 @@ def identify(fname, modeltype, imgOutDir, blobsOutFile, paramDir="data", gpu=Tru
         else:
             mot.step(bbox)
         
-        img_kalman = drawBlobs(img.copy(), mot.blobs)
+        #img_kalman = drawBlobs(img.copy(), mot.blobs)
         writeBlobs(mot.blobs, blobsOutFile, mot.cnt)

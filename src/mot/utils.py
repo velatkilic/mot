@@ -90,10 +90,10 @@ def writeBlobs(blobs, file, frameID):
             h = y2 - y1
             idx = blobs[i].idx
             frames = blobs[i].frames
-            f.write(("{:4d}, " * 7).format(x1, y1, x2, y2, w, h, idx))
-            f.write("{:4d}".format(frameID))
+            f.write(("{:4d}, " * 7 + "{:4d}\n").format(x1, y1, x2, y2, w, h, idx, frameID))
+            #f.write("{:4d}".format(frameID))
             #f.write(",".join([str(frame) for frame in frames]))
-            f.write("\n")
+            #f.write("\n")
 
 def findClosestBox(x,y,bbox):
     '''

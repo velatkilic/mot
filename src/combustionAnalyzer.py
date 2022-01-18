@@ -106,7 +106,7 @@ def combustionAnalyzer(video, model, param_dir, output_dir, write_meta, crop, gp
         rep_imgs = dg.draw(reproduce_img_dir, write_meta, draw_id)
 
     Logger.basic("Reproducing video ...")
-    orig_imgs = collect_images(detection_img_dir, "gmm_", "jpg", 0, num_frames - 1)
+    orig_imgs = collect_images(detection_img_dir, "{:s}_".format(model), "jpg", 0, num_frames - 1)
     merged_imgs = paste_images(orig_imgs, rep_imgs, merged_img_dir, write_meta)
 
     cv_imgs = pillow2cv(merged_imgs)
