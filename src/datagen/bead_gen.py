@@ -3,7 +3,7 @@ from scipy.ndimage import gaussian_filter
 
 
 class Beads:
-    def __init__(self, side=256, beadradMax=3, beadradMin=3, numbeadsMax=20, numbeadsMin=10, sigma=1):
+    def __init__(self, side=256, beadradMax=10, beadradMin=3, numbeadsMax=20, numbeadsMin=10, sigma=1):
         self.side = side
         self.beadradMax = beadradMax
         self.beadradMin = beadradMin

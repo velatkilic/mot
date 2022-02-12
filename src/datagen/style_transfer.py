@@ -1,11 +1,13 @@
 """
 Neural Transfer Using PyTorch
 =============================
-
+https://pytorch.org/tutorials/advanced/neural_style_tutorial.html
 
 **Author**: `Alexis Jacq <https://alexis-jacq.github.io>`_
 
 **Edited by**: `Winston Herring <https://github.com/winston6>`_
+
+Possibly edited by Velat Kilic
 """
 
 from __future__ import print_function
@@ -227,7 +229,3 @@ def run_style_transfer(cnn, normalization_mean, normalization_std,
     input_img.data.clamp_(0, 1)
 
     return input_img
-
-
-######################################################################
-# Finally, we can run the algorithm.

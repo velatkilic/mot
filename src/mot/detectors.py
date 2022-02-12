@@ -13,18 +13,21 @@ import pickle
 
 class DNN:
     def __init__(self, fname=None, dset=None, th_speed=0.2, th_dist=2):
+
+        # Dataset
         if dset is None:
             Logger.error("Dataset cannot be empty")
+        self.dset = dset
 
+        # DNN
         if fname is None:
             Logger.error("Training not implemented yet. STUB")
-
-        self.dset = dset
-        # Config
-        with open(fname + "cfg.pkl", "rb") as file:
-            cfg = pickle.load(file)
-        cfg.merge_from_list(["MODEL.WEIGHTS", fname+"model_final.pth"])
-        self.predictor = DefaultPredictor(cfg)  # create predictor from the config
+        else:
+            # Config
+            with open(fname + "cfg.pkl", "rb") as file:
+                cfg = pickle.load(file)
+            cfg.merge_from_list(["MODEL.WEIGHTS", fname + "model_final.pth"])
+            self.predictor = DefaultPredictor(cfg)  # create predictor from the config
 
         # optic flow merge params
         self.th_speed = th_speed
