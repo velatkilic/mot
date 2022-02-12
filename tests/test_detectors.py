@@ -1,5 +1,7 @@
 from unittest import TestCase
 import os
+
+from src.dataset import Dataset
 from src.mot.detectors import *
 
 

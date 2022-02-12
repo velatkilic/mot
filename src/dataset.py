@@ -2,6 +2,7 @@ import imageio
 from skimage.io import imread_collection
 from src.logger import Logger
 import cv2 as cv
+import numpy as np
 
 
 class Dataset:
@@ -29,7 +30,7 @@ class Dataset:
         if self.gray:
             img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
-        return img
+        return img.astype(np.float32)
 
     def length(self):
         if self.video_name is not None:
