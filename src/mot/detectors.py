@@ -19,7 +19,15 @@ from src.datagen.style_data_gen_mask import StyleDataset
 
 
 class DNN:
-    def __init__(self, fname=None, dset=None, train_set=None, th_speed=0.2, th_dist=2):
+    def __init__(self, fname=None, dset=None, train_set=None, th_speed=0.2, th_dist=2,
+                 num_workers=2, ims_per_batch=2, lr=0.00025, max_iter=300, bs_roi=128,
+                 num_classes=1, score_th=0.3, nms_th=0.5):
+
+        # Dataset
+        if dset is None:
+            Logger.error("Dataset cannot be empty")
+        self.dset = dset
+
         # optic flow merge params
         self.th_speed = th_speed
         self.th_dist = th_dist
@@ -27,12 +35,16 @@ class DNN:
         # use existing training set
         self.train_set = train_set
 
-        # Dataset
-        if dset is None:
-            Logger.error("Dataset cannot be empty")
-        self.dset = dset
-
         # DNN
+        self.num_workers = num_workers
+        self.ims_per_batch = ims_per_batch
+        self.lr = lr  # learning rate
+        self.max_iter = max_iter  # number of iterations
+        self.bs_roi = bs_roi  # region of interest (ROI) head batchsize
+        self.num_classes = num_classes  # only particle class
+        self.score_th = score_th
+        self.nms_th = nms_th
+
         if fname is None:
             print("Entering DNN training mode ... ")
             self.__train()
@@ -73,7 +85,7 @@ class DNN:
                 for j in range(npar):
                     speed[j] = np.mean(mag[mask[j, :, :]])
                 # normalize speeds (useful for plotting later)
-                if len(speed)==0:
+                if len(speed) == 0:
                     print("loyloy")
                 max_speed = np.max(speed)
                 speed = speed / max_speed
@@ -106,7 +118,7 @@ class DNN:
         # register training dataset
         for d in self.train_set:
             DatasetCatalog.register(d, lambda d=d: self.__get_bead_dicts(os.getcwd() + "/" + d))
-            MetadataCatalog.get(d).set(thing_classes=["particle"])
+            # MetadataCatalog.get(d).set(thing_classes=["particle"])
 
         Logger.basic("Training DNN ... ")
         # Config for training
@@ -115,14 +127,14 @@ class DNN:
         cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
         cfg.DATASETS.TRAIN = tuple(self.train_set)
         cfg.DATASETS.TEST = ()
-        cfg.DATALOADER.NUM_WORKERS = 2
+        cfg.DATALOADER.NUM_WORKERS = self.num_workers
         cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(
             "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")  # Let training initialize from model zoo
-        cfg.SOLVER.IMS_PER_BATCH = 2
-        cfg.SOLVER.BASE_LR = 0.00025  # learning rate
-        cfg.SOLVER.MAX_ITER = 300  # number of iterations
-        cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128  # region of interest (ROI) head batchsize
-        cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only particle class
+        cfg.SOLVER.IMS_PER_BATCH = self.ims_per_batch
+        cfg.SOLVER.BASE_LR = self.lr  # learning rate
+        cfg.SOLVER.MAX_ITER = self.max_iter  # number of iterations
+        cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = self.bs_roi  # region of interest (ROI) head batchsize
+        cfg.MODEL.ROI_HEADS.NUM_CLASSES = self.num_classes  # only particle class
 
         os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
         trainer = DefaultTrainer(cfg)  # init trainer
@@ -131,8 +143,8 @@ class DNN:
 
         # cfg already contains everything we've set previously. Now we changed it a little bit for inference:
         cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")  # path to the model we just trained
-        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.3  # set a custom testing threshold, (smaller leads to more detections)
-        cfg.MODEL.ROI_HEADS.NMS_THRESH_TEST = 0.5  # non-max suppression threshold
+        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = self.score_th  # set a custom testing threshold, (smaller leads to more detections)
+        cfg.MODEL.ROI_HEADS.NMS_THRESH_TEST = self.nms_th  # non-max suppression threshold
         self.predictor = DefaultPredictor(cfg)  # create predictor from the config
         print("DNN training complete.")
 
@@ -166,7 +178,7 @@ class Canny:
                 x, y, w, h = cv.boundingRect(temp)
                 bbox.append([x, y, x + w, y + h])
 
-        return bbox
+        return bbox, None
 
 
 class GMM:
@@ -207,7 +219,7 @@ class GMM:
             if area > self.minArea:
                 x, y, w, h = cv.boundingRect(temp)
                 bbox.append([x, y, x + w, y + h])
-        return bbox
+        return bbox, None
 
     def __train(self):
         while (True):
