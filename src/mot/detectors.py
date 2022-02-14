@@ -65,17 +65,19 @@ class DNN:
             mag, ang = cv.cartToPolar(flow[..., 0], flow[..., 1])
 
             npar = len(bbox)
-            speed = np.zeros((npar,))  # average speed around the center
-            for j in range(npar):
-                speed[j] = np.mean(mag[mask[j, :, :]])
-            # normalize speeds (useful for plotting later)
-            max_speed = np.max(speed)
-            speed = speed / max_speed
+            if npar > 0:
+                speed = np.zeros((npar,))  # average speed around the center
+                for j in range(npar):
+                    speed[j] = np.mean(mag[mask[j, :, :]])
+                # normalize speeds (useful for plotting later)
+                if len(speed)==0:
+                    print("loyloy")
+                max_speed = np.max(speed)
+                speed = speed / max_speed
 
-            # Fuse if speed is similar
-            mask, bbox, _ = mergeBoxes(mask, bbox, speed, mag,
-                                       max_speed, self.th_speed, self.th_dist, 2)
-
+                # Fuse if speed is similar
+                mask, bbox, _ = mergeBoxes(mask, bbox, speed, mag,
+                                           max_speed, self.th_speed, self.th_dist, 2)
         return bbox, mask
 
     def __get_bead_dicts(self, img_dir):
