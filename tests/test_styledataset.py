@@ -12,7 +12,7 @@ class TestStyleDataset(unittest.TestCase):
         dset = Dataset(image_folder=fnam)
 
         # StyleDataset Generator
-        sdset = StyleDataset(dset = dset)
+        sdset = StyleDataset(dset=dset, len=10)
         sdset.gen_dataset()
 
         print("lol")

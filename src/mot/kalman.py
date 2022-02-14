@@ -58,7 +58,9 @@ class Blob:
         self.kalm.statePost = np.array(state, dtype=np.float32)
         
     def predict(self):
-        return self.kalm.predict()
+        state = self.kalm.predict()
+        self.bbox = np.array(cen2cor(state[0], state[1], state[2], state[3]))
+        return state
     
     def correct(self,measurement):
         self.kalm.correct(measurement)
