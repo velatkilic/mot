@@ -1,6 +1,13 @@
 import numpy as np
+import pathlib
+import os
 from scipy.ndimage import gaussian_filter
+import cv2 as cv
+import pycocotools
 
+from detectron2.structures import BoxMode
+
+from src.logger import Logger
 
 class Beads:
     def __init__(self, side=256, beadradMax=10, beadradMin=3, numbeadsMax=20, numbeadsMin=10, sigma=1):
@@ -40,3 +47,54 @@ class Beads:
         bbox = np.concatenate((x1, y1, x2, y2), axis=1)
 
         return img, seg, bbox
+
+class BeadDataset:
+    def __init__(self, outFolder=None, len=10000, gray=True):
+        self.len = len
+        self.beads = Beads()
+        self.gray = gray
+
+        # Set output folder for the generated data
+        if outFolder is None:
+            self.outFolder = os.path.join(pathlib.Path(os.getcwd()), pathlib.Path('train/'))
+        else:
+            self.outFolder = outFolder
+
+        # Create folder if is doesn't exist
+        try:
+            os.mkdir(self.outFolder)
+        except:
+            Logger.warning("Folder already exists, overwriting existing data")
+
+    def gen_dataset(self):
+        # train set
+        dataset_dicts = []
+
+        for i in range(self.len):
+            record = {}
+            img, seg, bbox = self.beads.gen_sample()
+
+            if self.gray:
+                img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+
+            fname = self.outFolder + '/train_' + str(i) + '.png'
+            cv.imwrite(fname, img)
+
+            record["file_name"] = fname
+            record["image_id"] = i
+            record["height"] = self.beads.side
+            record["width"] = self.beads.side
+
+            objs = []
+            for j in range(len(bbox)):
+                obj = {
+                    "bbox": bbox[j],
+                    "bbox_mode": BoxMode.XYXY_ABS,
+                    "segmentation": pycocotools.mask.encode(np.asarray(seg[j], order="F")),
+                    "category_id": 0,
+                }
+                objs.append(obj)
+            record["annotations"] = objs
+
+            dataset_dicts.append(record)
+        np.savez(self.outFolder + '/annot.npz', dataset_dicts=dataset_dicts)

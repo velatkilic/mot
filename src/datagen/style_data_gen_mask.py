@@ -34,7 +34,7 @@ class StyleDataset:
 
         # Set output folder for the generated data
         if outFolder is None:
-            self.outFolder = os.path.join(pathlib.Path(os.getcwd()), pathlib.Path('train/'))
+            self.outFolder = os.path.join(pathlib.Path(os.getcwd()), pathlib.Path('train_style/'))
         else:
             self.outFolder = outFolder
 

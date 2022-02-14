@@ -6,7 +6,7 @@ from src.dataset import Dataset
 from src.logger import Logger
 
 
-def identify(dset, model, imgOutDir, blobsOutFile, crop=(512, 512)):
+def identify(dset, model=None, imgOutDir, blobsOutFile, crop=(512, 512)):
     """
     Identify particles using specified model.
 
