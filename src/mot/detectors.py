@@ -19,10 +19,13 @@ from src.datagen.style_data_gen_mask import StyleDataset
 
 
 class DNN:
-    def __init__(self, fname=None, dset=None, th_speed=0.2, th_dist=2):
+    def __init__(self, fname=None, dset=None, train_set=None, th_speed=0.2, th_dist=2):
         # optic flow merge params
         self.th_speed = th_speed
         self.th_dist = th_dist
+
+        # use existing training set
+        self.train_set = train_set
 
         # Dataset
         if dset is None:
@@ -84,29 +87,33 @@ class DNN:
         return np.load(img_dir + '/annot.npz', allow_pickle=True)['dataset_dicts']
 
     def __train(self):
-        # Create bead dataset
-        print("Creating bead dataset without style transfer")
-        bdset = BeadDataset()
-        bdset.gen_dataset()
-        print("Bead dataset generation without style transfer complete.")
+        if self.train_set is None:
+            # Create bead dataset
+            print("Creating bead dataset without style transfer")
+            bdset = BeadDataset()
+            bdset.gen_dataset()
+            print("Bead dataset generation without style transfer complete.")
 
-        # Create bead dataset with style transfer
-        print("Creating bead dataset with style transfer")
-        sdset = StyleDataset(dset=self.dset)
-        sdset.gen_dataset()
-        print("Bead dataset generation with style transfer complete.")
+            # Create bead dataset with style transfer
+            print("Creating bead dataset with style transfer")
+            sdset = StyleDataset(dset=self.dset)
+            sdset.gen_dataset()
+            print("Bead dataset generation with style transfer complete.")
+
+            # Training dataset
+            self.train_set = ["train", "train_style"]
 
         # register training dataset
-        for d in ["train", "train_style"]:
-            DatasetCatalog.register("beads_" + d, lambda d=d: self.__get_bead_dicts(os.getcwd() + "/" + d))
-            MetadataCatalog.get("beads_" + d).set(thing_classes=["particle"])
+        for d in self.train_set:
+            DatasetCatalog.register(d, lambda d=d: self.__get_bead_dicts(os.getcwd() + "/" + d))
+            MetadataCatalog.get(d).set(thing_classes=["particle"])
 
         Logger.basic("Training DNN ... ")
         # Config for training
         cfg = get_cfg()
         cfg.INPUT.MASK_FORMAT = "bitmask"
         cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
-        cfg.DATASETS.TRAIN = ("beads_train", "beads_train_style")
+        cfg.DATASETS.TRAIN = tuple(self.train_set)
         cfg.DATASETS.TEST = ()
         cfg.DATALOADER.NUM_WORKERS = 2
         cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(

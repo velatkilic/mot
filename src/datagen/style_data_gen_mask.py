@@ -21,7 +21,7 @@ from src.logger import Logger
 
 
 class StyleDataset:
-    def __init__(self, dset=None, outFolder=None, len=10, gray=True):
+    def __init__(self, dset=None, outFolder=None, len=1000, gray=True):
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.len = len
