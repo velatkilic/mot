@@ -2,11 +2,11 @@ import cv2 as cv
 from src.mot.utils import drawBox, drawBlobs, writeBlobs
 from src.mot.kalman import MOT
 from src.mot.detectors import DNN
-from src.dataset import Dataset
+import os
 from src.logger import Logger
 
 
-def identify(dset, imgOutDir, blobsOutFile, model=None, crop=(512, 512)):
+def identify(dset, imgOutDir, blobsOutFile, model=None, train_set=None, crop=(512, 512)):
     """
     Identify particles using specified model.
 
@@ -18,7 +18,13 @@ def identify(dset, imgOutDir, blobsOutFile, model=None, crop=(512, 512)):
         crop          : (int, int) Cropping sizes in x and y dimension.
     """
     # Object detection and kalman
-    dnn = DNN(dset=dset, fname=model)
+    dnn = DNN(dset=dset, fname=model, train_set=train_set)
+
+    # Make directory
+    try:
+        os.mkdir(imgOutDir+"/kalman")
+    except:
+        print("Folder already exists, overwriting contents ... ")
 
     Logger.detail("Detecting particles ...")
     for i in range(dset.length()):
@@ -39,4 +45,6 @@ def identify(dset, imgOutDir, blobsOutFile, model=None, crop=(512, 512)):
             mot.step(bbox)
 
         img_kalman = drawBlobs(img.copy(), mot.blobs)
+        cv.imwrite("{:s}/kalman/dnn_{:d}.jpg".format(imgOutDir, i), img_kalman)
+
         writeBlobs(mot.blobs, blobsOutFile, mot.cnt)
