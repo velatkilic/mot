@@ -1,6 +1,6 @@
 from typing import List
 import pandas as pd
-from digraph.particle import Particle
+from src.digraph.particle import Particle
 
 """
     Collection of constants and functions needed in all classes and modules.

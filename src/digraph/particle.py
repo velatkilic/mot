@@ -25,7 +25,7 @@ class Particle:
         self.predict_pos = predicted_pos
         #self.x = self.position[0]
         #self.y = self.position[1]
-        self.box = bbox  # length and width of identifying box around particle.
+        self.bbox = bbox  # length and width of identifying box around particle.
         self.size = bbox[0] * bbox[1]
         self.bubble = bubble    # boolean value for whether has bubble in particle
 
@@ -48,7 +48,7 @@ class Particle:
         """
         Return the upper left position of bbox.
         """
-        return self.position
+        return self.position # TODO: make deepcopy
 
     def get_center_position(self):
         """

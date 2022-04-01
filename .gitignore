@@ -4,3 +4,6 @@ test.mp4
 tests/data/*
 tests/_trial_temp
 tests/video/*
+test_*
+data
+.vscode
