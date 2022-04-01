@@ -23,7 +23,7 @@ def identify(fname, modeltype, imgOutDir, blobsOutFile, paramDir="data", gpu=Tru
     detector = None
     if modeltype.lower() == "dnn":
         detector  = DNN(dset=dset, fname=paramDir, gpu=gpu)
-    # Add back gmm and canny.
+    # TODO: Add back gmm and canny.
 
     Logger.detail("Detecting particles ...")
     for i in range(dset.length()):

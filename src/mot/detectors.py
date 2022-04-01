@@ -5,16 +5,14 @@ various bounding box detection schemes
 import os
 import numpy as np
 import cv2 as cv
-from src.logger import Logger
-from src.mot.utils import mergeBoxes
-from src.dataset import Dataset
-
 from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
 from detectron2 import model_zoo
 import torch
-
 import pickle
+from src.logger import Logger
+from src.mot.utils import mergeBoxes
+from src.dataset import Dataset
 
 
 class DNN:

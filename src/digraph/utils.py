@@ -6,8 +6,8 @@ from os import path, listdir
 from PIL import Image
 import cv2 as cv
 
-from logger import Logger
-from digraph.particle import Particle
+from src.logger import Logger
+from src.digraph.particle import Particle
 
 CLOSE_IN_TIME = 3
 CLOSE_IN_SPACE = 40
@@ -18,10 +18,16 @@ BACK_TRACE_LIMIT = 3    # Time frames before the start of a trajectory allowed t
 
 def distance(a: List[float], b: List[float]) -> float:
     """L2 norm of vectors of any dimension."""
+    if a is None:
+        Logger.warning("Trying to compute distance for a null vector-a.")
+        return float("inf")
+    elif b is None:
+        Logger.warning("Trying to compute distance for a null vector-b.")
+        return float("inf")
     if len(a) != len(b):
         Logger.error("Cannot calculate distance between two vectors of different dimensions: " + \
                      "{:d} {:d}".format(len(a), len(b)))
-        return -1
+        return float("inf")
     sum = 0
     for i in range(0, len(a)):
         sum += (a[i] - b[i])**2

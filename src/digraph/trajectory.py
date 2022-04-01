@@ -2,9 +2,10 @@ from __future__ import annotations
 from typing import List, TYPE_CHECKING
 import numpy as np
 import copy
-import digraph.commons as commons
-from logger import Logger
-from digraph.utils import ptcl_distance, BACK_TRACE_LIMIT
+
+import src.digraph.commons as commons
+from src.logger import Logger
+from src.digraph.utils import ptcl_distance, BACK_TRACE_LIMIT
 
 if TYPE_CHECKING:
     from node import Node
@@ -189,8 +190,8 @@ class Trajectory:
         if time in self.ptcl_time_map.keys():
             return self.ptcl_time_map[time].get_position()
         elif len(self.ptcls) < 2:
-            Logger.debug("Cannot backtrace or predict position for trajectory eixsting for " \
-                         "only one frame.")
+            Logger.warning("Cannot backtrace or predict position for trajectory eixsting for " \
+                           "only one frame.")
             return None
         elif min(self.ptcl_time_map.keys()) - time <= BACK_TRACE_LIMIT:
             # Back trace to estimate positions in past time (no more than 2 time frames).

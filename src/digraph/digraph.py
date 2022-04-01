@@ -4,13 +4,13 @@ from pathlib import Path
 import copy
 from PIL import Image, ImageDraw, ImageFont
 
-from logger import Logger
-from digraph.node import Node
-from digraph.trajectory import Trajectory
-from digraph.particle import Particle
-import digraph.commons as commons
-import digraph.utils as utils
-from digraph.utils import BACK_TRACE_LIMIT
+from src.logger import Logger
+from src.digraph.node import Node
+from src.digraph.trajectory import Trajectory
+from src.digraph.particle import Particle
+import src.digraph.commons as commons
+import src.digraph.utils as utils
+from src.digraph.utils import BACK_TRACE_LIMIT
 
 class Digraph:
     """
