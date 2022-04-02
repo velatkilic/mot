@@ -325,10 +325,7 @@ class Digraph:
                     draw.rectangle(xy, outline=(50, 50, 50), width = 5) # dark gray
                     if draw_id:
                         text_xy = (p.position[0] + p.box[0] + 5, p.position[1] - 5)
-                        lib_path = Path(os.path.realpath(__file__)).parent.parent.parent \
-                                .absolute().joinpath("lib").joinpath("arial.ttf")
-                        font = ImageFont.truetype(str(lib_path), size=16)
-                        draw.text(text_xy, str(p.get_id()), (255, 0, 0), font = font) # Id number in red.
+                        draw.text(text_xy, str(p.get_id()), (255, 0, 0)) # Id number in red.
             if write_img:
                 im.save("{:s}/reproduced_{:d}.png".format(dest, t)) # JPG doesn't support alpha
             images.append(im)
