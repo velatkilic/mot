@@ -8,16 +8,16 @@ import os
 from src.logger import Logger
 from torch.utils.data import DataLoader
 
-
-def identify(dset, imgOutDir, blobsOutFile, model=None, train_set=None, crop=(512, 512)):
+def identify(dset, imgOutDir, blobsOutFile, modelType = "DNN", model=None, train_set=None, gpu=True, crop=(512, 512)):
     """
     Identify particles using specified model.
 
     Attributes:
         fname         : String  Path to the video
-        model         : String  Path to the DNN weights and config file
         imgOutDir     : String  Output folder of images with bounding boxes.
         blobsOutFile  : String  Output file for info of each identified particle.
+        modelType     : String  Type of detection model: DNN, GMM, or Canny.
+        model         : String  Path to the DNN weights and config file
         crop          : (int, int) Cropping sizes in x and y dimension.
     """
     #
@@ -58,14 +58,13 @@ def identify(dset, imgOutDir, blobsOutFile, model=None, train_set=None, crop=(51
     for i in range(dset.length()):
         img = dset.get_img(i)
         bbox, mask = model.predict(img)
-
         # Draw bounding boxes
         cont = drawBox(img.copy(), bbox)
 
         # Show final image
-        # cv.imshow("Frame", cont)
-        cv.imwrite("{:s}/dnn_{:d}.jpg".format(imgOutDir, i), cont)
-
+        #cv.imshow("Frame", cont)
+        cv.imwrite("{:s}/{:s}_{:d}.jpg".format(imgOutDir, modelType, i), cont)
+        
         # Kalman tracking
         if i == 0:
             mot = MOT(bbox)
