@@ -35,7 +35,7 @@ class Test(TestCase):
     #
     #     identify(dset, imgOutDir, blobsOutFile, model=model)
 
-    def test_identify_tif_without_model(self):
+    def test_identify_avi_without_model(self):
         cwd = os.getcwd()
         # fnam = os.path.join(cwd,
         #                     "data/Effect of Mg on AlZr/(Al8Mg)Zr_Full_20kfps_90kfps_20170309_DG_150mm_167_S1/*.tif")

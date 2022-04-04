@@ -39,7 +39,7 @@ def identify(dset, imgOutDir, blobsOutFile, model=None, train_set=None, crop=(51
         sdset.gen_dataset()
 
 
-    # Object detection and kalman
+    # Object detection
     if model is None:
         model = DNN()
         for d in train_set:
@@ -47,6 +47,7 @@ def identify(dset, imgOutDir, blobsOutFile, model=None, train_set=None, crop=(51
             train_dataloader = DataLoader(d, batch_size=2, shuffle=True, collate_fn=collate_fn, num_workers=4)
             model.train(train_dataloader)
 
+    # Tracking
     # Make directory
     try:
         os.mkdir(imgOutDir+"/kalman")
