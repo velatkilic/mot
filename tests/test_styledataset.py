@@ -1,5 +1,5 @@
 import unittest
-from src.datagen.style_data_gen_mask import StyleDataset
+from src.datagen.style_data_gen_mask import StyleDatasetGen
 from src.dataset import Dataset
 import os
 
@@ -12,7 +12,7 @@ class TestStyleDataset(unittest.TestCase):
         dset = Dataset(image_folder=fnam)
 
         # StyleDataset Generator
-        sdset = StyleDataset(dset=dset, len=10)
+        sdset = StyleDatasetGen(dset=dset, len=10)
         sdset.gen_dataset()
 
         print("lol")
