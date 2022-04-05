@@ -35,7 +35,7 @@ class Test(TestCase):
     #
     #     identify(dset, imgOutDir, blobsOutFile, model=model)
 
-    def test_identify_avi_without_model(self):
+    def test_identify_avi_without_model_without_data(self):
         cwd = os.getcwd()
         # fnam = os.path.join(cwd,
         #                     "data/Effect of Mg on AlZr/(Al8Mg)Zr_Full_20kfps_90kfps_20170309_DG_150mm_167_S1/*.tif")
@@ -51,3 +51,21 @@ class Test(TestCase):
         blobsOutFile = os.path.join(cwd, "data/blobsOutFile.dat")
 
         identify(dset, imgOutDir, blobsOutFile)
+
+    def test_identify_avi_without_model(self):
+        cwd = os.getcwd()
+
+        crop = (0, 0, 512, 512)
+        fname = os.path.join(cwd, "data/test.mp4")
+        dset = Dataset(video_name=fname, crop=crop)
+
+        imgOutDir = os.path.join(cwd, "data/imgout")
+        os.makedirs(imgOutDir, exist_ok=True)
+
+        blobsOutFile = os.path.join(cwd, "data/blobsOutFile.dat")
+
+        # train data
+        train1 = os.path.join(cwd, "train")
+        train2 = os.path.join(cwd, "train_style")
+
+        identify(dset, imgOutDir, blobsOutFile, train_set=[train1, train2])

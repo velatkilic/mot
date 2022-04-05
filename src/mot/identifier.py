@@ -67,9 +67,9 @@ def identify(dset, imgOutDir, blobsOutFile, modelType = "DNN", model=None, train
         
         # Kalman tracking
         if i == 0:
-            mot = MOT(bbox)
+            mot = MOT(bbox, mask)
         else:
-            mot.step(bbox)
+            mot.step(bbox, mask)
 
         img_kalman = drawBlobs(img.copy(), mot.blobs)
         cv.imwrite("{:s}/kalman/dnn_{:d}.jpg".format(imgOutDir, i), img_kalman)

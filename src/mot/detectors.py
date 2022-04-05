@@ -22,9 +22,9 @@ from torchvision import transforms
 class DNN:
     def __init__(self, model=None, num_classes=2, hidden_layer=256, device="cuda:0",
                  optimizer=None, lr=5e-3, momentum=0.9, weight_decay=5e-4,
-                 lr_scheduler=None, step_size=3, gamma=0.1):
+                 lr_scheduler=None, step_size=3, gamma=0.1, nms_threshold=0.2):
         self.device = device
-
+        self.nms_threshold = nms_threshold
         # DNN model
         if model is None:
             self.model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
@@ -86,8 +86,13 @@ class DNN:
     def predict(self, img):
         img = self.tsf(img)
         prediction = self.model([img.to(self.device)])
-        bbox = prediction[0]["boxes"].to("cpu").data.numpy()
-        mask = prediction[0]["masks"].to("cpu").data.numpy()
+        bbox = prediction[0]["boxes"]
+        mask = prediction[0]["masks"]
+        scor = prediction[0]["scores"]
+        indx = torchvision.ops.nms(bbox, scor, self.nms_threshold)
+
+        bbox = bbox[indx,...].to("cpu").data.numpy()
+        mask = mask[indx,...].to("cpu").data.numpy()
         return bbox, mask
 
 
