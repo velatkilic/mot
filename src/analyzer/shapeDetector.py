@@ -132,9 +132,12 @@ class ShapeDetector:
     def crop_particle(particle, img, is_grayscale = False):
         """
         Args:
-            particle    Particle
-            img         ndarray     Entire frame of video containing the input particle
-            is_binary   boolean     Whether argument image is binary
+            particle    Particle \n
+            img         ndarray     Entire frame of video containing the input particle\n
+            is_binary   boolean     Whether argument image is binary\n
+
+        Crop particle according to its bbox location and size. Add buffers to its bbox to
+        aid following identification.
         """
         x, y = particle.get_position()
         w, h = particle.get_bbox()
