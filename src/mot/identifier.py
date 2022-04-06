@@ -43,6 +43,7 @@ def identify(dset, imgOutDir, blobsOutFile, modelType = "DNN", model=None, train
     if model is None:
         model = DNN()
         for d in train_set:
+            print("Train set: " + d)
             d = BeadDatasetFile(d)
             train_dataloader = DataLoader(d, batch_size=2, shuffle=True, collate_fn=collate_fn, num_workers=4)
             model.train(train_dataloader)
