@@ -22,7 +22,7 @@ from torchvision import transforms
 class DNN:
     def __init__(self, model=None, num_classes=2, hidden_layer=256, device="cuda:0",
                  optimizer=None, lr=5e-3, momentum=0.9, weight_decay=5e-4,
-                 lr_scheduler=None, step_size=3, gamma=0.1, nms_threshold=0.1, score_threshold=0.3):
+                 lr_scheduler=None, step_size=3, gamma=0.1, nms_threshold=None, score_threshold=None): # nms_threshold=0.1, score_threshold=0.3
         self.device = device
         self.nms_threshold = nms_threshold
         self.score_threshold = score_threshold
@@ -36,9 +36,9 @@ class DNN:
             # mask regression
             in_features_mask = self.model.roi_heads.mask_predictor.conv5_mask.in_channels
             self.model.roi_heads.mask_predictor = MaskRCNNPredictor(in_features_mask, hidden_layer, num_classes)
-
         else:
-            self.model = model
+            self.model = torch.load(model)
+
         self.model.to(self.device)
 
         # Optimizer
@@ -93,17 +93,26 @@ class DNN:
             scor = prediction[0]["scores"]
 
             # threshold boxes with small confidence scores
-            indx = torch.where(scor>self.score_threshold)[0]
-            bbox = bbox[indx, ...]
-            mask = mask[indx, ...]
-            scor = scor[indx, ...]
+            if self.score_threshold is not None:
+                indx = torch.where(scor > self.score_threshold)[0]
+                bbox = bbox[indx, ...]
+                mask = mask[indx, ...]
+                scor = scor[indx, ...]
 
             # non-max suppression
-            indx = torchvision.ops.nms(bbox, scor, self.nms_threshold)
+            if self.nms_threshold is not None:
+                indx = torchvision.ops.nms(bbox, scor, self.nms_threshold)
+                bbox = bbox[indx, ...]
+                mask = mask[indx, ...]
+                scor = scor[indx, ...]
 
-        bbox = bbox[indx,...].to("cpu").data.numpy()
-        mask = mask[indx,...].to("cpu").data.numpy()
-        return bbox, mask
+        bbox = bbox.to("cpu").data.numpy()
+        mask = mask.to("cpu").data.numpy()
+        scor = scor.to("cpu").data.numpy()
+        return bbox, mask#, scor
+
+    def save_model(self, path="model.pth"):
+        torch.save(self.model, path)
 
 
 class Canny:

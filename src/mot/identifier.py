@@ -48,6 +48,9 @@ def identify(dset, imgOutDir, blobsOutFile, modelType = "DNN", model=None, train
             train_dataloader = DataLoader(d, batch_size=2, shuffle=True, collate_fn=collate_fn, num_workers=4)
             model.train(train_dataloader)
 
+        # save model
+        model.save_model()
+
     # Tracking
     # Make directory
     try:
