@@ -8,7 +8,7 @@ import os
 from src.logger import Logger
 from torch.utils.data import DataLoader
 
-def identify(dset, imgOutDir, blobsOutFile, modelType = "DNN", model=None, train_set=None, gpu=True, crop=(512, 512)):
+def identify(dset, imgOutDir, blobsOutFile, modelType = "DNN", model=None, train_set=None, device="cuda:0"):
     """
     Identify particles using specified model.
 
@@ -21,7 +21,7 @@ def identify(dset, imgOutDir, blobsOutFile, modelType = "DNN", model=None, train
         crop          : (int, int) Cropping sizes in x and y dimension.
     """
     #
-    if train_set is None:
+    if train_set is None and model is None:
         # regular bead data
         filename = os.path.join(os.getcwd(), "train")
         try:
@@ -41,7 +41,7 @@ def identify(dset, imgOutDir, blobsOutFile, modelType = "DNN", model=None, train
 
     # Object detection
     if model is None:
-        model = DNN()
+        model = DNN(device=device)
         for d in train_set:
             print("Train set: " + d)
             d = BeadDatasetFile(d)
@@ -50,6 +50,8 @@ def identify(dset, imgOutDir, blobsOutFile, modelType = "DNN", model=None, train
 
         # save model
         model.save_model()
+    else:
+        model = DNN(model)
 
     # Tracking
     # Make directory

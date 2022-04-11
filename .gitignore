@@ -7,3 +7,4 @@ tests/video/*
 test_*
 data
 .vscode
+*.pth
