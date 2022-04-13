@@ -20,8 +20,8 @@ from torchvision import transforms
 class DNN:
     def __init__(self, model=None, num_classes=2, hidden_layer=256, device="cuda:0",
                  optimizer=None, lr=5e-3, momentum=0.9, weight_decay=5e-4,
-                 lr_scheduler=None, step_size=3, gamma=0.1, nms_threshold=None, score_threshold=None): # nms_threshold=0.1, score_threshold=0.3
-        self.device = device
+                 lr_scheduler=None, step_size=3, gamma=0.1, nms_threshold=0.1, score_threshold=0.3): # nms_threshold=0.1, score_threshold=0.3
+        self.device = torch.device(device)
         self.nms_threshold = nms_threshold
         self.score_threshold = score_threshold
         # DNN model
@@ -35,9 +35,9 @@ class DNN:
             in_features_mask = self.model.roi_heads.mask_predictor.conv5_mask.in_channels
             self.model.roi_heads.mask_predictor = MaskRCNNPredictor(in_features_mask, hidden_layer, num_classes)
         else:
-            self.model = torch.load(model)
+            self.model = torch.load(model, map_location=self.device)
 
-        self.model.to(self.device)
+        self.model.to(device)
 
         # Optimizer
         if optimizer is None:

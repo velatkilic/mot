@@ -18,7 +18,7 @@ class Particle:
 
     def __init__(self, id, time_frame, position: List[int], \
                  predicted_pos: List[int]=[0,0], bbox = [0, 0],
-                 bubble=None):
+                 bubble=None, shape=None):
         self.id = id
         self.time_frame = time_frame
         self.position = position
@@ -28,6 +28,7 @@ class Particle:
         self.bbox = bbox  # length and width of identifying box around particle.
         self.size = bbox[0] * bbox[1]
         self.bubble = bubble    # boolean value for whether has bubble in particle
+        self.shape = shape
 
     def set_id(self, id):
         self.id = id
@@ -71,6 +72,12 @@ class Particle:
     
     def has_bubble(self):
         return self.bubble == None
+
+    def set_shape(self, shape: str):
+        self.shape = shape
+
+    def get_shape(self):
+        return self.shape
 
     def __str__(self) -> str:
         string = "Particle_id : {:4d}; Time_frame: {:4d}; ".format(self.id, self.time_frame) + \

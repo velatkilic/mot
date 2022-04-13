@@ -8,17 +8,17 @@ import os
 from src.logger import Logger
 from torch.utils.data import DataLoader
 
-def identify(dset, imgOutDir, blobsOutFile, modelType = "DNN", model=None, train_set=None, device="cuda:0"):
+def identify(dset, imgOutDir, blobsOutFile, modelType="DNN", model=None, train_set=None, device="cuda:0"):
     """
     Identify particles using specified model.
 
     Attributes:
-        fname         : String  Path to the video
-        imgOutDir     : String  Output folder of images with bounding boxes.
+        dset          : Dataset  Instance of the video wrapper class Dataset.
+        imgOutDir     : String  Output folder of video frames with detected bounding boxes.
         blobsOutFile  : String  Output file for info of each identified particle.
         modelType     : String  Type of detection model: DNN, GMM, or Canny.
-        model         : Pre-trained detection model loaded from file.
-        crop          : (int, int) Cropping sizes in x and y dimension.
+        model         : String  Path to pre-trained model.
+        device        : String  Device to be used for training and detecting. "cuda:0" or "cpu".
     """
     #
     if train_set is None and model is None:
@@ -27,7 +27,7 @@ def identify(dset, imgOutDir, blobsOutFile, modelType = "DNN", model=None, train
         try:
             os.mkdir(filename)
         except:
-            print("Folder already exists")
+            Logger.warning("Folder of regular beads already exists! Overwriting existing data.")
 
         bead_data_to_file(filename)
         train_set = [filename]
@@ -50,12 +50,13 @@ def identify(dset, imgOutDir, blobsOutFile, modelType = "DNN", model=None, train
         # save model
         model.save_model()
     else:
-        model = DNN(model)
+        model = DNN(model, device=device)
 
     # Tracking
     # Make directory
+    kalman_dir = os.path.join(imgOutDir, "kalman")
     try:
-        os.mkdir(imgOutDir+"/kalman")
+        os.mkdir(kalman_dir)
     except:
         print("Folder already exists, overwriting contents ... ")
 
@@ -77,6 +78,6 @@ def identify(dset, imgOutDir, blobsOutFile, modelType = "DNN", model=None, train
             mot.step(bbox, mask)
 
         img_kalman = drawBlobs(img.copy(), mot.blobs)
-        cv.imwrite("{:s}/kalman/dnn_{:d}.jpg".format(imgOutDir, i), img_kalman)
+        cv.imwrite("{:s}/{:s}_{:d}.jpg".format(kalman_dir, modelType, i), img_kalman)
 
         writeBlobs(mot.blobs, blobsOutFile, mot.cnt)

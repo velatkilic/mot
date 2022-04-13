@@ -39,7 +39,7 @@ class StyleDatasetGen:
         try:
             os.mkdir(self.outFolder)
         except:
-            Logger.warning("Folder already exists, overwriting existing data")
+            Logger.warning("Folder of style-transfered beads already exists! Overwriting existing data.")
 
         # Bead generator
         self.beads = Beads()
