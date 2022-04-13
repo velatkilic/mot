@@ -38,10 +38,12 @@ def identify(dset, imgOutDir, blobsOutFile, modelType = "DNN", model=None, train
         sdset = StyleDatasetGen(dset=dset, len=100)
         sdset.gen_dataset()
 
-
     # Object detection
     if model is None:
-        model = DNN()
+        if not gpu:
+            model = DNN(device="cpu")
+        else:
+            model = DNN()
         for d in train_set:
             d = BeadDatasetFile(d)
             train_dataloader = DataLoader(d, batch_size=2, shuffle=True, collate_fn=collate_fn, num_workers=4)

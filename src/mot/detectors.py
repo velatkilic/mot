@@ -17,8 +17,6 @@ import torchvision
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 from torchvision import transforms
-
-
 class DNN:
     def __init__(self, model=None, num_classes=2, hidden_layer=256, device="cuda:0",
                  optimizer=None, lr=5e-3, momentum=0.9, weight_decay=5e-4,
