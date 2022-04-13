@@ -8,7 +8,7 @@ import os
 from src.logger import Logger
 from torch.utils.data import DataLoader
 
-def identify(dset, imgOutDir, blobsOutFile, modelType = "DNN", model=None, train_set=None, gpu=True, crop=(512, 512)):
+def identify(dset, imgOutDir, blobsOutFile, modelType = "DNN", model=None, train_set=None, device="cuda:0"):
     """
     Identify particles using specified model.
 
@@ -17,11 +17,11 @@ def identify(dset, imgOutDir, blobsOutFile, modelType = "DNN", model=None, train
         imgOutDir     : String  Output folder of images with bounding boxes.
         blobsOutFile  : String  Output file for info of each identified particle.
         modelType     : String  Type of detection model: DNN, GMM, or Canny.
-        model         : String  Path to the DNN weights and config file
+        model         : Pre-trained detection model loaded from file.
         crop          : (int, int) Cropping sizes in x and y dimension.
     """
     #
-    if train_set is None:
+    if train_set is None and model is None:
         # regular bead data
         filename = os.path.join(os.getcwd(), "train")
         try:
@@ -40,14 +40,17 @@ def identify(dset, imgOutDir, blobsOutFile, modelType = "DNN", model=None, train
 
     # Object detection
     if model is None:
-        if not gpu:
-            model = DNN(device="cpu")
-        else:
-            model = DNN()
+        model = DNN(device=device)
         for d in train_set:
+            print("Train set: " + d)
             d = BeadDatasetFile(d)
             train_dataloader = DataLoader(d, batch_size=2, shuffle=True, collate_fn=collate_fn, num_workers=4)
             model.train(train_dataloader)
+
+        # save model
+        model.save_model()
+    else:
+        model = DNN(model)
 
     # Tracking
     # Make directory

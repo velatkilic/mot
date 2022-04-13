@@ -199,8 +199,8 @@ class MOT:
                     if vx1 == 0 and vx2 == 0 and vy1 == 0 and vy2 == 0:
                         mcon = iMetric>0.1
                     else:
-                        mcon = (dMetric<2. or iMetric>0.05) and vMetric<2.
-                        # mcon = (iMetric>0.1) and vMetric<1.
+                        mcon = (dMetric<1. or iMetric>0.05) and vMetric<2.
+                        # mcon = (iMetric>0.05) and vMetric<1.
                     
                     if mcon:
                         # merge blobs

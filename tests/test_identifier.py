@@ -69,3 +69,21 @@ class Test(TestCase):
         train2 = os.path.join(cwd, "train_style")
 
         identify(dset, imgOutDir, blobsOutFile, train_set=[train1, train2])
+
+    def test_identify_avi_with_model(self):
+        cwd = os.getcwd()
+
+        crop = (0, 0, 512, 512)
+        fname = os.path.join(cwd, "data/test.mp4")
+        dset = Dataset(video_name=fname, crop=crop)
+
+        imgOutDir = os.path.join(cwd, "data/imgout")
+        os.makedirs(imgOutDir, exist_ok=True)
+
+        blobsOutFile = os.path.join(cwd, "data/blobsOutFile.dat")
+
+        # train data
+        train1 = os.path.join(cwd, "train")
+        train2 = os.path.join(cwd, "train_style")
+
+        identify(dset, imgOutDir, blobsOutFile, model="model.pth")
