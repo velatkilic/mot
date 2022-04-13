@@ -36,6 +36,51 @@ class ShapeDetector:
             if x + w + ShapeDetector.BBOX_BUFFER <= img.shape[0] else img.shape[0]
         y2 = y + h + ShapeDetector.BBOX_BUFFER \
             if y + h + ShapeDetector.BBOX_BUFFER <= img.shape[1] else img.shape[1] 
+        cropped_img = img[y1:y2, x1:x2, :]  # First index is row, which is y in the x-y coordinate sense!
+        
+        # Threshold
+
+        # Canny
+
+        # Hough circle transform
+
+        cropped_img_binary = ShapeDetector.binary_threshold(cropped_img)
+        
+        # 2. Get contour
+        cv.imwrite("./p_{:d}.jpg".format(particle.get_id()), cropped_img_binary)
+        contour, bbox = ShapeDetector.detect_contour(cropped_img_binary)
+        cv.drawContours(cropped_img, contour, -1, [0, 0, 255], 1)
+        cv.imwrite("./p_{:d}_with_contour.jpg".format(particle.get_id()), cropped_img)
+        
+        # 3. Calculate ratio of contour length and area
+        #if len(contours) > 1:
+        #    print("Number of contours in the cropped image are: " + str(len(contours)))
+        perimeter = cv.arcLength(contour, True)
+        area = cv.contourArea(contour)
+        p2a_ratio = perimeter ** 2 / area  # Take square to normalize
+        print(p2a_ratio)
+        shape = "circle"
+        if p2a_ratio > 4 * math.pi + ShapeDetector.P2A_RATIO_THRESHOLD:
+            shape = "non-circle"
+        return shape
+
+    def detect_shape_obsolete(self, particle: Particle, img) -> str:
+        x, y = particle.get_position()
+        w, h = particle.get_bbox()
+
+        #print(x, y)
+        # 1. Cut image out
+        # TODO: add a loop to gradually enlarge the bbox.
+        
+        # Coordinates of upper left corner of the crop
+        x1 = x - ShapeDetector.BBOX_BUFFER if x - ShapeDetector.BBOX_BUFFER >= 0 else 0
+        y1 = y - ShapeDetector.BBOX_BUFFER if y - ShapeDetector.BBOX_BUFFER >= 0 else 0
+
+        # Coordinates of lower right corner of the crop
+        x2 = x + w + ShapeDetector.BBOX_BUFFER \
+            if x + w + ShapeDetector.BBOX_BUFFER <= img.shape[0] else img.shape[0]
+        y2 = y + h + ShapeDetector.BBOX_BUFFER \
+            if y + h + ShapeDetector.BBOX_BUFFER <= img.shape[1] else img.shape[1] 
         #print(x1, y1, x2, y2)
         cropped_img = img[y1:y2, x1:x2, :]  # First index is row, which is y in the x-y coordinate sense!
         cropped_img_binary = ShapeDetector.binary_threshold(cropped_img)

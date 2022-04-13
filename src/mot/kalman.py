@@ -20,9 +20,10 @@ class Blob:
         frames: [<integer>] List of frame ids the particle lives in.
         kalm: CV KalmanFilter The kalmanfilter tracking this particle.
     """
-    def __init__(self, idx, bbox):
+    def __init__(self, idx, bbox, mask):
         self.idx    = idx
         self.bbox   = bbox
+        self.masks  = [mask]
         self.color  = np.random.randint(0,255,size=(3,))
         self.dead   = 0
         self.frames = []
@@ -61,7 +62,8 @@ class Blob:
         self.bbox = np.array(cen2cor(state[0], state[1], state[2], state[3]))
         return state
     
-    def correct(self,measurement):
+    def correct(self,measurement,mask):
+        self.masks.append(mask)
         self.kalm.correct(measurement)
         
         # correct bbox
@@ -72,7 +74,7 @@ class Blob:
         return self.kalm.statePost
 
 class MOT:
-    def __init__(self, bbox, fixed_cost=100., merge=True, merge_it=2, merge_th=50):
+    def __init__(self, bbox, mask, fixed_cost=100., merge=True, merge_it=2, merge_th=50):
         self.total_blobs = 0
         self.cnt         = 0              # Frame id
         self.blobs       = []             # List of all blobs (idenfied particle)
@@ -87,7 +89,7 @@ class MOT:
         for i in range(self.blolen):
             # assign a blob for each bbox
             self.total_blobs += 1
-            b = Blob(self.total_blobs,bbox[i])
+            b = Blob(self.total_blobs,bbox[i], mask[i])
             b.frames.append(self.cnt)
             self.blobs.append(b)
         
@@ -95,7 +97,7 @@ class MOT:
         if merge:
             self.__merge()
     
-    def step(self, bbox):
+    def step(self, bbox, mask):
         """
         Add bboxes of a frame and create/merge/delete blobs.
         """
@@ -109,7 +111,7 @@ class MOT:
         blob_ind = self.__hungarian(bbox)
         
         # Update assigned blobs if exists else create new blobs
-        new_blobs = self.__update(bbox,blob_ind)
+        new_blobs = self.__update(bbox,blob_ind, mask)
         
         # Blobs to be deleted
         ind_del = self.__delBlobInd(bbox, blob_ind)
@@ -136,17 +138,17 @@ class MOT:
         box_ind, blob_ind = linear_sum_assignment(cost)
         return blob_ind
     
-    def __update(self,bbox,blob_ind):
+    def __update(self,bbox,blob_ind,mask):
         boxlen = len(bbox)
         new_blobs = []
         for i in range(boxlen):
             m   = np.array(cor2cen(bbox[i]), dtype=np.float32)
             ind = blob_ind[i]
             if ind < self.blolen:
-                self.blobs[ind].correct(m)
+                self.blobs[ind].correct(m, mask[i])
             else:
                 self.total_blobs += 1
-                b = Blob(self.total_blobs,bbox[i])
+                b = Blob(self.total_blobs,bbox[i],mask[i])
                 b.frames.append(self.cnt)
                 new_blobs.append(b)
         return new_blobs
@@ -197,8 +199,8 @@ class MOT:
                     if vx1 == 0 and vx2 == 0 and vy1 == 0 and vy2 == 0:
                         mcon = iMetric>0.1
                     else:
-                        # mcon = (dMetric<1. or iMetric>0.1) and vMetric<1.
-                        mcon = (iMetric>0.1) and vMetric<1.
+                        mcon = (dMetric<1. or iMetric>0.05) and vMetric<2.
+                        # mcon = (iMetric>0.05) and vMetric<1.
                     
                     if mcon:
                         # merge blobs

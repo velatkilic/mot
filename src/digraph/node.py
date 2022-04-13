@@ -1,7 +1,6 @@
 from __future__ import annotations
 from typing import List, TYPE_CHECKING, Tuple
 from src.logger import Logger
-from src.digraph.commons import PIC_DIMENSION
 import sys
 
 if TYPE_CHECKING:

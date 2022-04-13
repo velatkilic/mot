@@ -11,16 +11,13 @@ import torch
 import torchvision.models as models
 import torchvision.transforms as transforms
 
-import pycocotools
-from detectron2.structures import BoxMode
-
 from src.datagen.style_transfer import run_style_transfer
-from src.datagen.bead_gen import Beads
+from src.datagen.bead_gen import *
 
 from src.logger import Logger
 
 
-class StyleDataset:
+class StyleDatasetGen:
     def __init__(self, dset=None, outFolder=None, len=1000, gray=True):
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -34,7 +31,7 @@ class StyleDataset:
 
         # Set output folder for the generated data
         if outFolder is None:
-            self.outFolder = os.path.join(pathlib.Path(os.getcwd()), pathlib.Path('train_style/'))
+            self.outFolder = os.path.join(os.getcwd(), "train_style")
         else:
             self.outFolder = outFolder
 
@@ -42,7 +39,7 @@ class StyleDataset:
         try:
             os.mkdir(self.outFolder)
         except:
-            Logger.warning("Folder already exists, overwriting existing data")
+            Logger.warning("Folder of style-transfered beads already exists! Overwriting existing data.")
 
         # Bead generator
         self.beads = Beads()
@@ -81,7 +78,6 @@ class StyleDataset:
         dataset_dicts = []
 
         for i in range(self.len):
-            record = {}
             content_img, seg, bbox = self.beads.gen_sample()
             ind = np.random.randint(0, self.dset.length())
 
@@ -93,25 +89,8 @@ class StyleDataset:
             output = run_style_transfer(self.cnn, self.cnn_normalization_mean, self.cnn_normalization_std,
                                         content_img, style_img, input_img)
 
-            fname = self.outFolder + '/train_' + str(i) + '.png'
+            fname = os.path.join(self.outFolder, "syn_bead_" + str(i) + ".png")
             img_sty = self.ten2im(output)
             img_sty.save(fname)
+            write_target_to_file(seg, bbox, self.outFolder, i)
 
-            record["file_name"] = fname
-            record["image_id"] = i
-            record["height"] = self.beads.side
-            record["width"] = self.beads.side
-
-            objs = []
-            for j in range(len(bbox)):
-                obj = {
-                    "bbox": bbox[j],
-                    "bbox_mode": BoxMode.XYXY_ABS,
-                    "segmentation": pycocotools.mask.encode(np.asarray(seg[j], order="F")),
-                    "category_id": 0,
-                }
-                objs.append(obj)
-            record["annotations"] = objs
-
-            dataset_dicts.append(record)
-        np.savez(self.outFolder + '/annot.npz', dataset_dicts=dataset_dicts)

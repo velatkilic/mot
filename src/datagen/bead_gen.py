@@ -1,13 +1,12 @@
 import numpy as np
-import pathlib
-import os
 from scipy.ndimage import gaussian_filter
+import torch
+from torchvision import transforms
+import scipy.io as sio
+import os
 import cv2 as cv
-import pycocotools
+import glob
 
-from detectron2.structures import BoxMode
-
-from src.logger import Logger
 
 class Beads:
     def __init__(self, side=256, beadradMax=10, beadradMin=3, numbeadsMax=20, numbeadsMin=10, sigma=1):
@@ -48,53 +47,105 @@ class Beads:
 
         return img, seg, bbox
 
-class BeadDataset:
-    def __init__(self, outFolder=None, len=10000, gray=True):
-        self.len = len
-        self.beads = Beads()
-        self.gray = gray
 
-        # Set output folder for the generated data
-        if outFolder is None:
-            self.outFolder = os.path.join(pathlib.Path(os.getcwd()), pathlib.Path('train/'))
+def numpy_to_maskrcnn_target(bbox, labels, seg, idx, area, iscrowd=None):
+    target = {'boxes': torch.tensor(bbox, dtype=torch.float32)}
+    if labels is None:
+        target['labels'] = torch.ones(len(bbox), dtype=torch.int64)
+    else:
+        target['labels'] = torch.tensor(labels, dtype=torch.int64)
+    target['masks'] = torch.tensor(seg, dtype=torch.uint8)
+    target['image_id'] = torch.tensor([idx])
+    target['area'] = torch.tensor([area], dtype=torch.float32)
+    if iscrowd is None:
+        target['iscrowd'] = torch.zeros((len(bbox),), dtype=torch.int64)
+    else:
+        target['iscrowd'] = torch.tensor(iscrowd, dtype=torch.int64)
+
+    return target
+
+
+def bead_data_to_file(filename, N=10000, side=256, beadradMax=10, beadradMin=3, numbeadsMax=20, numbeadsMin=10,
+                      sigma=1):
+    bead_gen = Beads(side, beadradMax, beadradMin, numbeadsMax, numbeadsMin, sigma)
+
+    for i in range(N):
+        img, seg, bbox = bead_gen.gen_sample()
+        iname = os.path.join(filename, "syn_bead_" + str(i) + ".png")
+        cv.imwrite(iname, img)
+        write_target_to_file(seg, bbox, filename, i)
+
+
+def write_target_to_file(seg, bbox, filename, idx):
+    fname = os.path.join(filename, "syn_bead_" + str(idx) + ".mat")
+    sio.savemat(fname, {"seg": seg, "bbox": bbox})
+
+
+def read_target_from_file(filename, idx):
+    fname = os.path.join(filename, "syn_bead_" + str(idx) + ".mat")
+    data = sio.loadmat(fname)
+    return data["seg"], data["bbox"]
+
+
+def collate_fn(batch):
+    return tuple(zip(*batch))
+
+
+class BeadDataset(torch.utils.data.Dataset):
+    def __init__(self, bead_gen, length=10000, tsf=None):
+        self.bead_gen = bead_gen
+        self.length = length
+        if tsf is None:
+            self.tsf = transforms.Compose([
+                transforms.ToTensor()
+            ])
         else:
-            self.outFolder = outFolder
+            self.tsf = tsf
 
-        # Create folder if is doesn't exist
-        try:
-            os.mkdir(self.outFolder)
-        except:
-            Logger.warning("Folder already exists, overwriting existing data")
+    def __len__(self):
+        return self.length
 
-    def gen_dataset(self):
-        # train set
-        dataset_dicts = []
+    def __getitem__(self, idx):
+        # generate data
+        img, seg, bbox = self.bead_gen.gen_sample()
 
-        for i in range(self.len):
-            record = {}
-            img, seg, bbox = self.beads.gen_sample()
+        # format target
+        area = (bbox[:, 2] - bbox[:, 0]) * (bbox[:, 3] - bbox[:, 1])
+        target = numpy_to_maskrcnn_target(bbox, None, seg, idx, area)
 
-            if self.gray:
-                img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        # transform image
+        img = self.tsf(img)
 
-            fname = self.outFolder + '/train_' + str(i) + '.png'
-            cv.imwrite(fname, img)
+        return img, target
 
-            record["file_name"] = fname
-            record["image_id"] = i
-            record["height"] = self.beads.side
-            record["width"] = self.beads.side
 
-            objs = []
-            for j in range(len(bbox)):
-                obj = {
-                    "bbox": bbox[j],
-                    "bbox_mode": BoxMode.XYXY_ABS,
-                    "segmentation": pycocotools.mask.encode(np.asarray(seg[j], order="F")),
-                    "category_id": 0,
-                }
-                objs.append(obj)
-            record["annotations"] = objs
+class BeadDatasetFile(torch.utils.data.Dataset):
+    def __init__(self, filename, tsf=None):
+        self.filename = filename
+        if tsf is None:
+            self.tsf = transforms.Compose([
+                transforms.ToTensor()
+            ])
+        else:
+            self.tsf = tsf
 
-            dataset_dicts.append(record)
-        np.savez(self.outFolder + '/annot.npz', dataset_dicts=dataset_dicts)
+        self.length = len(glob.glob(filename))
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, idx):
+        # read data
+        seg, bbox = read_target_from_file(self.filename, idx)
+
+        iname = os.path.join(self.filename, "syn_bead_" + str(idx) + ".png")
+        img = cv.imread(iname)
+
+        # format target
+        area = (bbox[:, 2] - bbox[:, 0]) * (bbox[:, 3] - bbox[:, 1])
+        target = numpy_to_maskrcnn_target(bbox, None, seg, idx, area)
+
+        # transform image
+        img = self.tsf(img)
+
+        return img, target

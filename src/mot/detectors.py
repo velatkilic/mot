@@ -7,146 +7,110 @@ import numpy as np
 import cv2 as cv
 import pickle
 
-from detectron2 import model_zoo
-from detectron2.engine import DefaultPredictor, DefaultTrainer
-from detectron2.config import get_cfg
-from detectron2.data import MetadataCatalog, DatasetCatalog
-
 from src.logger import Logger
-from src.mot.utils import mergeBoxes
-from src.datagen.bead_gen import BeadDataset
-from src.datagen.style_data_gen_mask import StyleDataset
+# from src.mot.utils import mergeBoxes
+# from src.datagen.bead_gen import BeadDataset
+# from src.datagen.style_data_gen_mask import StyleDataset
 
-
+import torch
+import torchvision
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
+from torchvision import transforms
 class DNN:
-    def __init__(self, fname=None, dset=None, train_set=None, th_speed=0.2, th_dist=2,
-                 num_workers=2, ims_per_batch=2, lr=0.00025, max_iter=300, bs_roi=128,
-                 num_classes=1, score_th=0.3, nms_th=0.5):
+    def __init__(self, model=None, num_classes=2, hidden_layer=256, device="cuda:0",
+                 optimizer=None, lr=5e-3, momentum=0.9, weight_decay=5e-4,
+                 lr_scheduler=None, step_size=3, gamma=0.1, nms_threshold=0.1, score_threshold=0.3): # nms_threshold=0.1, score_threshold=0.3
+        self.device = torch.device(device)
+        self.nms_threshold = nms_threshold
+        self.score_threshold = score_threshold
+        # DNN model
+        if model is None:
+            self.model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
+            # bounding box regression
+            in_features = self.model.roi_heads.box_predictor.cls_score.in_features
+            self.model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
 
-        # Dataset
-        if dset is None:
-            Logger.error("Dataset cannot be empty")
-        self.dset = dset
-
-        # optic flow merge params
-        self.th_speed = th_speed
-        self.th_dist = th_dist
-
-        # use existing training set
-        self.train_set = train_set
-
-        # DNN
-        self.num_workers = num_workers
-        self.ims_per_batch = ims_per_batch
-        self.lr = lr  # learning rate
-        self.max_iter = max_iter  # number of iterations
-        self.bs_roi = bs_roi  # region of interest (ROI) head batchsize
-        self.num_classes = num_classes  # only particle class
-        self.score_th = score_th
-        self.nms_th = nms_th
-
-        if fname is None:
-            print("Entering DNN training mode ... ")
-            self.__train()
-            print("Training complete.")
+            # mask regression
+            in_features_mask = self.model.roi_heads.mask_predictor.conv5_mask.in_channels
+            self.model.roi_heads.mask_predictor = MaskRCNNPredictor(in_features_mask, hidden_layer, num_classes)
         else:
-            # Config
-            with open(fname + "cfg.pkl", "rb") as file:
-                cfg = pickle.load(file)
-            cfg.merge_from_list(["MODEL.WEIGHTS", fname + "model_final.pth"])
-            self.predictor = DefaultPredictor(cfg)  # create predictor from the config
+            self.model = torch.load(model, map_location=self.device)
 
-    def predict(self, idx):
-        # get DNN predictions
-        img = self.dset.get_img(idx)
+        self.model.to(device)
 
-        # convert gray since predictor expects BGR
-        if self.dset.gray:
-            img = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
+        # Optimizer
+        if optimizer is None:
+            params = [p for p in self.model.parameters() if p.requires_grad]
+            self.optimizer = torch.optim.SGD(params, lr=lr, momentum=momentum, weight_decay=weight_decay)
+        else:
+            self.optimizer = optimizer
 
-        out = self.predictor(img)
-        bbox = out["instances"].pred_boxes.to('cpu').tensor.data.numpy()
-        mask = out["instances"].pred_masks.to('cpu').data.numpy().astype(np.bool)
+        # scheduler
+        if lr_scheduler is None:
+            self.lr_scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=step_size, gamma=gamma)
+        else:
+            self.lr_scheduler = lr_scheduler
 
-        # optical flow fuse
-        if (idx + 1) < self.dset.length():
-            gry = cv.cvtColor(img, cv.COLOR_BGR2GRAY)  # convert to gray scale
-            nxt = self.dset.get_img(idx + 1)  # get next frame
-            if not self.dset.gray:
-                nxt = cv.cvtColor(nxt, cv.COLOR_BGR2GRAY)  # convert to gray scale
-            flow = cv.calcOpticalFlowFarneback(gry, nxt, None, pyr_scale=0.5, levels=5,
-                                               winsize=15, iterations=3, poly_n=5,
-                                               poly_sigma=1.2, flags=0)
-            mag, ang = cv.cartToPolar(flow[..., 0], flow[..., 1])
+        # for testing
+        self.tsf = transforms.Compose([
+            transforms.ToTensor()
+        ])
 
-            npar = len(bbox)
-            if npar > 0:
-                speed = np.zeros((npar,))  # average speed around the center
-                for j in range(npar):
-                    speed[j] = np.mean(mag[mask[j, :, :]])
-                # normalize speeds (useful for plotting later)
-                if len(speed) == 0:
-                    print("loyloy")
-                max_speed = np.max(speed)
-                speed = speed / max_speed
+    def _train_one_epoch(self, train_dataloader, print_interval):
+        for images, targets in train_dataloader:
+            images = list(image.to(self.device) for image in images)
+            targets = [{k: v.to(self.device) for k, v in t.items()} for t in targets]
 
-                # Fuse if speed is similar
-                mask, bbox, _ = mergeBoxes(mask, bbox, speed, mag,
-                                           max_speed, self.th_speed, self.th_dist, 2)
-        return bbox, mask
+            loss_dict = self.model(images, targets)
 
-    def __get_bead_dicts(self, img_dir):
-        return np.load(img_dir + '/annot.npz', allow_pickle=True)['dataset_dicts']
+            if print_interval != 0:
+                print(f'Loss summary: ')
+                for l in loss_dict:
+                    print(f'{l} {loss_dict[l]}')
 
-    def __train(self):
-        if self.train_set is None:
-            # Create bead dataset
-            print("Creating bead dataset without style transfer")
-            bdset = BeadDataset()
-            bdset.gen_dataset()
-            print("Bead dataset generation without style transfer complete.")
+            losses = sum(loss for loss in loss_dict.values())
 
-            # Create bead dataset with style transfer
-            print("Creating bead dataset with style transfer")
-            sdset = StyleDataset(dset=self.dset)
-            sdset.gen_dataset()
-            print("Bead dataset generation with style transfer complete.")
+            self.optimizer.zero_grad()
+            losses.backward()
+            self.optimizer.step()
+            self.lr_scheduler.step()
 
-            # Training dataset
-            self.train_set = ["train", "train_style"]
+    def train(self, train_dataloader, epoch=20, print_interval=1000):
+        self.model.train()
+        for i in range(epoch):
+            self._train_one_epoch(train_dataloader, print_interval)
+        self.model.eval()
 
-        # register training dataset
-        for d in self.train_set:
-            DatasetCatalog.register(d, lambda d=d: self.__get_bead_dicts(os.getcwd() + "/" + d))
-            # MetadataCatalog.get(d).set(thing_classes=["particle"])
+    def predict(self, img):
+        img = self.tsf(img)
+        with torch.no_grad():
+            prediction = self.model([img.to(self.device)])
+            bbox = prediction[0]["boxes"]
+            mask = prediction[0]["masks"]
+            scor = prediction[0]["scores"]
 
-        Logger.basic("Training DNN ... ")
-        # Config for training
-        cfg = get_cfg()
-        cfg.INPUT.MASK_FORMAT = "bitmask"
-        cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
-        cfg.DATASETS.TRAIN = tuple(self.train_set)
-        cfg.DATASETS.TEST = ()
-        cfg.DATALOADER.NUM_WORKERS = self.num_workers
-        cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(
-            "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")  # Let training initialize from model zoo
-        cfg.SOLVER.IMS_PER_BATCH = self.ims_per_batch
-        cfg.SOLVER.BASE_LR = self.lr  # learning rate
-        cfg.SOLVER.MAX_ITER = self.max_iter  # number of iterations
-        cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = self.bs_roi  # region of interest (ROI) head batchsize
-        cfg.MODEL.ROI_HEADS.NUM_CLASSES = self.num_classes  # only particle class
+            # threshold boxes with small confidence scores
+            if self.score_threshold is not None:
+                indx = torch.where(scor > self.score_threshold)[0]
+                bbox = bbox[indx, ...]
+                mask = mask[indx, ...]
+                scor = scor[indx, ...]
 
-        os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
-        trainer = DefaultTrainer(cfg)  # init trainer
-        trainer.resume_or_load(resume=False)
-        trainer.train()  # train
+            # non-max suppression
+            if self.nms_threshold is not None:
+                indx = torchvision.ops.nms(bbox, scor, self.nms_threshold)
+                bbox = bbox[indx, ...]
+                mask = mask[indx, ...]
+                scor = scor[indx, ...]
 
-        # cfg already contains everything we've set previously. Now we changed it a little bit for inference:
-        cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")  # path to the model we just trained
-        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = self.score_th  # set a custom testing threshold, (smaller leads to more detections)
-        cfg.MODEL.ROI_HEADS.NMS_THRESH_TEST = self.nms_th  # non-max suppression threshold
-        self.predictor = DefaultPredictor(cfg)  # create predictor from the config
-        print("DNN training complete.")
+        bbox = bbox.to("cpu").data.numpy()
+        mask = mask.to("cpu").data.numpy()
+        scor = scor.to("cpu").data.numpy()
+        return bbox, mask#, scor
+
+    def save_model(self, path="model.pth"):
+        torch.save(self.model, path)
 
 
 class Canny:

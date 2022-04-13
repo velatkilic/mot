@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import copy
 from PIL import Image, ImageDraw, ImageFont
+from src.analyzer.shapeDetector import ShapeDetector
 
 from src.logger import Logger
 from src.digraph.node import Node
@@ -258,7 +259,7 @@ class Digraph:
         pass
 
 
-    def draw(self, dest, write_img=True, draw_id=False) -> List[Image.Image]:
+    def draw(self, dest, write_img=True, draw_id=False, draw_shape=True) -> List[Image.Image]:
         """
             Draw trajectories and nodes in pictures. One picture for each time frame.
 
@@ -266,6 +267,7 @@ class Digraph:
                 dest      : String  Path of the folder to put the drawings.
                 write_img : Boolean Flag controlling whether to write images.
                 draw_id   : Boolean Whether draw particle id on top right corner of bbox.
+                draw_shape: Boolean Whether write shape of particle on top right corner.
             Returns:
                 A list of Image objects representing reproduced frames from the digraph
                 representation.
@@ -321,11 +323,16 @@ class Digraph:
                     #bbox = [10, 10] # For testing.
                     # For now, assume the p.position is the center of the bbox.
                     xy = [(p.position[0], p.position[1]),
-                          (p.position[0] + p.box[0], p.position[1] + p.box[1])]
-                    draw.rectangle(xy, outline=(50, 50, 50), width = 5) # dark gray
+                          (p.position[0] + p.bbox[0], p.position[1] + p.bbox[1])]
+                    draw.rectangle(xy, outline=(50, 50, 50), width = 2) # dark gray
                     if draw_id:
-                        text_xy = (p.position[0] + p.box[0] + 5, p.position[1] - 5)
-                        draw.text(text_xy, str(p.get_id()), (255, 0, 0)) # Id number in red.
+                        text_xy = (p.position[0] + p.bbox[0] + 5, p.position[1] - 15)
+                        # Id number in red.
+                        draw.text(text_xy, str(p.get_id()), (255, 0, 0), stroke_width=2)
+                    if draw_shape:
+                        text_xy = (p.position[0] + p.bbox[0] + 5, p.position[1] - 5)
+                        # Id number in red.
+                        draw.text(text_xy, str(p.get_shape()), (255, 0, 0), stroke_width=2)
             if write_img:
                 im.save("{:s}/reproduced_{:d}.png".format(dest, t)) # JPG doesn't support alpha
             images.append(im)
@@ -388,8 +395,8 @@ class Digraph:
                     #bbox = [10, 10] # For testing.
                     # For now, assume the p.position is the center of the bbox.
                     xy = [(p.position[0], p.position[1]),
-                          (p.position[0] + p.box[0], p.position[1] + p.box[1])]
-                    draw.rectangle(xy, outline=(50, 50, 50, 255), width = 5) # solid dark gray
+                          (p.position[0] + p.bbox[0], p.position[1] + p.bbox[1])]
+                    draw.rectangle(xy, outline=(50, 50, 50, 255), width = 2) # solid dark gray
             if write_img:
                 im.save("{:s}/reproduced_{:d}.png".format(dest, t))
             images.append(im.copy())
@@ -480,13 +487,11 @@ class Digraph:
                                          "the starting frame. {:d} {:d}".format(traj.id, t))
                             continue # go to next trajectory
                         xy = [tuple(p2.get_position()), tuple(p.get_position())]
-                        draw.line(xy, fill=(50, 50, 50, 255), width=5) # solid dark gray
+                        draw.line(xy, fill=(50, 50, 50, 255), width=2) # solid dark gray
             if write_img:
                 im.save("{:s}/reproduced_{:d}.png".format(dest, t))
             images.append(im.copy())
-
         return images
-
 
     def get_time_frames(self) -> Tuple[int]:
         """
@@ -500,6 +505,18 @@ class Digraph:
             end_frame = traj.get_end_time() if traj.get_end_time() > end_frame else end_frame
         return (start_frame, end_frame)
     
+    def detect_particle_shapes(self, video):
+        """
+        Args:
+            video   String  Path to the original video file.
+        """
+        shape_detector = ShapeDetector()
+        images = utils.extract_images(video)
+        for p in self.ptcls:
+            #shape = shape_detector.detect_shape(p, images[p.get_time_frame()])
+            shape="circle"
+            p.set_shape(shape)
+
     def __str__(self):
         """
             Return a string representation of the directed graph. <todo>

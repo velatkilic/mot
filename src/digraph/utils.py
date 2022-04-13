@@ -127,6 +127,16 @@ def load_blobs_from_text(file_name: str) -> List[Particle]:
                 particles.append(Particle(idx, time_frame, position, bbox=bbox))
     return particles
 
+def extract_images(video: str):
+    images = []
+    video_cap = cv.VideoCapture(video)
+    while True:
+        ret, img = video_cap.read()
+        if not ret: break
+
+        images.append(img)
+    return images
+
 def collect_images(dir: str, prefix: str, ext: str, start: int, end: int) \
     -> List[Image.Image]:
     files = [f for f in listdir(dir) 
