@@ -36,32 +36,55 @@ class ShapeDetector:
             if x + w + ShapeDetector.BBOX_BUFFER <= img.shape[0] else img.shape[0]
         y2 = y + h + ShapeDetector.BBOX_BUFFER \
             if y + h + ShapeDetector.BBOX_BUFFER <= img.shape[1] else img.shape[1] 
-        cropped_img = img[y1:y2, x1:x2, :]  # First index is row, which is y in the x-y coordinate sense!
-        
+        img_crop = img[y1:y2, x1:x2]  # First index is row, which is y in the x-y coordinate sense!
+        shape = ShapeDetector._adaptive_thresholding(img_crop)
+
+        ## Threshold
+        #img_adaptive_mean = ShapeDetector.adaptive_threshold(img_crop, cv.ADAPTIVE_THRESH_MEAN_C,
+        #    blocksize = 31, offset = 5, is_grayscale = True)
+        ## Canny
+        #pass
+        ## Hough circle transform
+        #circles = cv.HoughCircles(img_adaptive_mean, cv.HOUGH_GRADIENT, 1, 
+        #    img_crop.shape[0]/10, param1=90, param2=0.85,
+        #    minRadius = math.floor(img_crop.shape[0]/4), 
+        #    maxRadius = math.ceil(img_crop.shape[0]/2))
+#
+        #if circles is None:
+        #    shape="non-circle"
+        #elif len(circles[0, :]) >=1:
+        #    print(circles[0, :])
+        #    shape="undetermined"
+        #else:
+        #    shape = "circle"
+        return shape
+
+    def _adaptive_thresholding(img_crop):
         # Threshold
+        img_adaptive_mean = ShapeDetector.adaptive_threshold(img_crop, cv.ADAPTIVE_THRESH_MEAN_C,
+            blocksize = 31, offset = 5, is_grayscale = True)
+        contours, hierarchy = cv.findContours(img_adaptive_mean, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
+        contours.pop(0) # The first instance is the whole image.
 
-        # Canny
-
-        # Hough circle transform
-
-        cropped_img_binary = ShapeDetector.binary_threshold(cropped_img)
+        # TODO: add warning of multiple contours
+        # For now, use contour with largest area.
+        max_area = 5 # Lower bound of contour area.
+        contour = None
+        for c in contours:
+            area = cv.contourArea(c)
+            if area > max_area:
+                contour = c
         
-        # 2. Get contour
-        cv.imwrite("./p_{:d}.jpg".format(particle.get_id()), cropped_img_binary)
-        contour, bbox = ShapeDetector.detect_contour(cropped_img_binary)
-        cv.drawContours(cropped_img, contour, -1, [0, 0, 255], 1)
-        cv.imwrite("./p_{:d}_with_contour.jpg".format(particle.get_id()), cropped_img)
-        
-        # 3. Calculate ratio of contour length and area
-        #if len(contours) > 1:
-        #    print("Number of contours in the cropped image are: " + str(len(contours)))
-        perimeter = cv.arcLength(contour, True)
-        area = cv.contourArea(contour)
-        p2a_ratio = perimeter ** 2 / area  # Take square to normalize
-        print(p2a_ratio)
-        shape = "circle"
-        if p2a_ratio > 4 * math.pi + ShapeDetector.P2A_RATIO_THRESHOLD:
-            shape = "non-circle"
+        if contour is not None:
+            perimeter = cv.arcLength(contour, True)
+            area = cv.contourArea(contour)
+            p2a_ratio = perimeter ** 2 / area  # Take square to normalize
+            #print(p2a_ratio)
+            shape = "circle"
+            if p2a_ratio > 4 * math.pi + ShapeDetector.P2A_RATIO_THRESHOLD:
+                shape = "non-circle"
+        else:
+            shape = "undetermined"
         return shape
 
     def detect_shape_obsolete(self, particle: Particle, img) -> str:
@@ -113,7 +136,7 @@ class ShapeDetector:
             Array of [x, y, w, h] defining the bounding rectangulars.
         """
         contours, hierarchy = cv.findContours(img, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
-        print(len(contours))
+        #print(len(contours))
         contour = contours.pop(0)  # The first contour is the entire image. Remove.
         if len(contours) == 0:
             Logger.warning("Failed to find contour of a particle. " +

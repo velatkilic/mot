@@ -127,13 +127,14 @@ def load_blobs_from_text(file_name: str) -> List[Particle]:
                 particles.append(Particle(idx, time_frame, position, bbox=bbox))
     return particles
 
-def extract_images(video: str):
+def extract_images(video: str, to_gray = False):
     images = []
     video_cap = cv.VideoCapture(video)
     while True:
         ret, img = video_cap.read()
         if not ret: break
-
+        if to_gray:
+            img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         images.append(img)
     return images
 

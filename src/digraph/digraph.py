@@ -511,10 +511,9 @@ class Digraph:
             video   String  Path to the original video file.
         """
         shape_detector = ShapeDetector()
-        images = utils.extract_images(video)
+        images = utils.extract_images(video, to_gray=True)
         for p in self.ptcls:
-            #shape = shape_detector.detect_shape(p, images[p.get_time_frame()])
-            shape="circle"
+            shape = shape_detector.detect_shape(p, images[p.get_time_frame()])
             p.set_shape(shape)
 
     def __str__(self):
