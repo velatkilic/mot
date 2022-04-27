@@ -64,6 +64,9 @@ class ShapeDetector:
         img_adaptive_mean = ShapeDetector.adaptive_threshold(img_crop, cv.ADAPTIVE_THRESH_MEAN_C,
             blocksize = 31, offset = 5, is_grayscale = True)
         contours, hierarchy = cv.findContours(img_adaptive_mean, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
+        if len(contours) <= 1:
+            return "non-circle"
+            
         contours.pop(0) # The first instance is the whole image.
 
         # TODO: add warning of multiple contours
