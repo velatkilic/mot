@@ -194,6 +194,8 @@ class ShapeDetector:
         
         if not is_grayscale:
             img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        if img is None or len(img) == 0:
+            Logger.error("Image doesn't exist.")
         img_threshold = cv.adaptiveThreshold(img, 255, method, cv.THRESH_BINARY, blocksize, offset)
         return img_threshold
     

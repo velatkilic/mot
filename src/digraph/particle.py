@@ -18,7 +18,7 @@ class Particle:
 
     def __init__(self, id, time_frame, position: List[int], \
                  predicted_pos: List[int]=[0,0], bbox = [0, 0],
-                 bubble=None, shape=None):
+                 bubble=None, shape="non-circle"):
         self.id = id
         self.time_frame = time_frame
         self.position = position
