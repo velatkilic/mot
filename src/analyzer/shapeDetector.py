@@ -27,17 +27,31 @@ class ShapeDetector:
         # 1. Cut image out
         # TODO: add a loop to gradually enlarge the bbox.
         
-        # Coordinates of upper left corner of the crop
-        x1 = x - ShapeDetector.BBOX_BUFFER if x - ShapeDetector.BBOX_BUFFER >= 0 else 0
-        y1 = y - ShapeDetector.BBOX_BUFFER if y - ShapeDetector.BBOX_BUFFER >= 0 else 0
+        # Coordinates of top left corner of the crop
+        x1 = x - ShapeDetector.BBOX_BUFFER
+        if x1 < 0: x1 = 0
+        if x1 > img.shape[1]: x1 = img.shape[1]
+        
+        y1 = y - ShapeDetector.BBOX_BUFFER
+        if y1 < 0: y1 = 0
+        if y1 > img.shape[0]: y1 = img.shape[0]
 
-        # Coordinates of lower right corner of the crop
-        x2 = x + w + ShapeDetector.BBOX_BUFFER \
-            if x + w + ShapeDetector.BBOX_BUFFER <= img.shape[0] else img.shape[0]
-        y2 = y + h + ShapeDetector.BBOX_BUFFER \
-            if y + h + ShapeDetector.BBOX_BUFFER <= img.shape[1] else img.shape[1] 
+        # Coordinates of bottom right corner of the crop
+        x2 = x + w + ShapeDetector.BBOX_BUFFER
+        if x2 < x1: x2 = x1
+        if x2 > img.shape[1]: x2 = img.shape[1]
+        
+        y2 = y + h + ShapeDetector.BBOX_BUFFER
+        if y2 < y1: y2 = y1
+        if y2 > img.shape[0]: y2 = img.shape[0]
+
         img_crop = img[y1:y2, x1:x2]  # First index is row, which is y in the x-y coordinate sense!
-        shape = ShapeDetector._adaptive_thresholding(img_crop)
+        if img_crop.shape[0] * img_crop.shape[1] == 0: # empty image
+            Logger.error("Trying to detect shape for zero-size particle: " + 
+                         "{:d} {:d}".format(particle.get_time_frame(), particle.get_id()))
+            shape = "undetermined"
+        else:
+            shape = ShapeDetector._adaptive_thresholding(img_crop)
 
         ## Threshold
         #img_adaptive_mean = ShapeDetector.adaptive_threshold(img_crop, cv.ADAPTIVE_THRESH_MEAN_C,
@@ -66,14 +80,14 @@ class ShapeDetector:
         contours, hierarchy = cv.findContours(img_adaptive_mean, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
         if len(contours) <= 1:
             return "non-circle"
-            
-        contours.pop(0) # The first instance is the whole image.
+        
+        #contours.pop(0) # The first instance is the whole image.
 
         # TODO: add warning of multiple contours
         # For now, use contour with largest area.
         max_area = 5 # Lower bound of contour area.
         contour = None
-        for c in contours:
+        for c in contours[1:]:
             area = cv.contourArea(c)
             if area > max_area:
                 contour = c

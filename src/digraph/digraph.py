@@ -332,7 +332,8 @@ class Digraph:
                     if draw_shape:
                         text_xy = (p.position[0] + p.bbox[0] + 5, p.position[1] - 5)
                         # Id number in red.
-                        draw.text(text_xy, str(p.get_shape()), (255, 0, 0), stroke_width=2)
+                        shape = p.get_shape()[0].upper()
+                        draw.text(text_xy, str(shape), (255, 0, 0), stroke_width=2)
             if write_img:
                 im.save("{:s}/reproduced_{:d}.png".format(dest, t)) # JPG doesn't support alpha
             images.append(im)
