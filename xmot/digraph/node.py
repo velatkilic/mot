@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import List, TYPE_CHECKING, Tuple
-from src.logger import Logger
+from xmot.logger import Logger
 import sys
 
 if TYPE_CHECKING:

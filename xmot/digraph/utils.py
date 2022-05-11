@@ -6,8 +6,8 @@ from os import path, listdir
 from PIL import Image
 import cv2 as cv
 
-from src.logger import Logger
-from src.digraph.particle import Particle
+from xmot.logger import Logger
+from xmot.digraph.particle import Particle
 
 CLOSE_IN_TIME = 3
 CLOSE_IN_SPACE = 40

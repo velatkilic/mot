@@ -5,7 +5,7 @@ Utility functions
 
 import numpy as np
 import cv2 as cv
-from src.logger import Logger
+from xmot.logger import Logger
 
 def imosaic(img_list, size=None, gray=False):
     '''

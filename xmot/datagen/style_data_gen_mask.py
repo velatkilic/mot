@@ -11,10 +11,10 @@ import torch
 import torchvision.models as models
 import torchvision.transforms as transforms
 
-from src.datagen.style_transfer import run_style_transfer
-from src.datagen.bead_gen import *
+from xmot.datagen.style_transfer import run_style_transfer
+from xmot.datagen.bead_gen import *
 
-from src.logger import Logger
+from xmot.logger import Logger
 
 
 class StyleDatasetGen:

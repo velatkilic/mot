@@ -3,9 +3,9 @@ from typing import List, TYPE_CHECKING
 import numpy as np
 import copy
 
-import src.digraph.commons as commons
-from src.logger import Logger
-from src.digraph.utils import ptcl_distance, BACK_TRACE_LIMIT
+import xmot.digraph.commons as commons
+from xmot.logger import Logger
+from xmot.digraph.utils import ptcl_distance, BACK_TRACE_LIMIT
 
 if TYPE_CHECKING:
     from node import Node

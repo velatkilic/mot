@@ -2,9 +2,9 @@ import math
 import cv2 as cv
 from matplotlib.pyplot import draw
 import numpy as np
-from src.digraph.utils import load_blobs_from_text
-from src.digraph.particle import Particle
-from src.logger import Logger
+from xmot.digraph.utils import load_blobs_from_text
+from xmot.digraph.particle import Particle
+from xmot.logger import Logger
 
 class ShapeDetector:
 

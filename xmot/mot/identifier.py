@@ -1,11 +1,11 @@
 import cv2 as cv
-from src.mot.utils import drawBox, drawBlobs, writeBlobs
-from src.mot.kalman import MOT
-from src.mot.detectors import DNN
-from src.datagen.bead_gen import bead_data_to_file, BeadDatasetFile, collate_fn
-from src.datagen.style_data_gen_mask import StyleDatasetGen
+from xmot.mot.utils import drawBox, drawBlobs, writeBlobs
+from xmot.mot.kalman import MOT
+from xmot.mot.detectors import DNN
+from xmot.datagen.bead_gen import bead_data_to_file, BeadDatasetFile, collate_fn
+from xmot.datagen.style_data_gen_mask import StyleDatasetGen
 import os
-from src.logger import Logger
+from xmot.logger import Logger
 from torch.utils.data import DataLoader
 
 def identify(dset, imgOutDir, blobsOutFile, modelType="DNN", model=None, train_set=None, device="cuda:0"):
