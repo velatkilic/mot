@@ -1,7 +1,7 @@
 from unittest import TestCase
 import torch
-from src.datagen.bead_gen import BeadDataset, Beads, collate_fn, BeadDatasetFile
-from src.mot.detectors import DNN
+from xmot.datagen.bead_gen import BeadDataset, Beads, collate_fn, BeadDatasetFile
+from xmot.mot.detectors import DNN
 import os
 
 

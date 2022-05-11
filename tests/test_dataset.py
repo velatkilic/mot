@@ -1,5 +1,5 @@
 import unittest
-from src.dataset import Dataset
+from xmot.dataset import Dataset
 import os
 
 

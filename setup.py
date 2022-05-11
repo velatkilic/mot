@@ -22,5 +22,27 @@ setuptools.setup(
     # ],
     package_dir={"": "xmot"},
     packages=setuptools.find_packages(where="xmot"),
-    python_requires=">=3.6",
+    # python_requires=">=3.6",
+    install_requires = [
+        "numpy",
+        "scipy",
+        "torch",
+        "torchvision",
+        "opencv-contrib-python",
+        "imageio",
+        "imageio-ffmpeg",
+        "crefi",
+        "pycocotools",
+        "Pillow",
+        "click",
+        "matplotlib",
+        "scikit-image"
+    ],
+
+    extras_require = {
+        "dev": [
+            "pytest",
+            "twine",
+        ],
+    },
 )
