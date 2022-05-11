@@ -6,6 +6,7 @@ Utility functions
 import numpy as np
 import cv2 as cv
 from xmot.logger import Logger
+from sklearn.mixture import BayesianGaussianMixture
 
 def imosaic(img_list, size=None, gray=False):
     '''
@@ -378,3 +379,27 @@ def mergeBoxes(mask, bbox, speed, mag, max_speed, th_speed, th_dist, it):
     speed_new = np.asarray(speed_new)
 
     return mask_new, bbox_new, speed_new
+
+def merge_with_BGMM(bbox, mask, mag):
+    bbox_new = []
+    mask_new = []
+    
+    z = np.zeros((len(bbox),1))
+    bbox_wspeed = np.hstack((bbox, z))
+    
+    bgm = BayesianGaussianMixture(n_components=len(bbox), max_iter=10).fit(bbox_wspeed) # Dirichlet process
+    asg = bgm.predict(bbox_wspeed) # cluster assignments
+    uid = np.unique(asg) # unique clusters
+    for idx in uid:
+        indx = np.where(asg==idx)[0] # get indices for a given cluster assignment
+        temp_box = bbox[indx[0],:] # set temp box to the first element
+        temp_mask = mask[indx[0],...] # set temp mask to the first element
+        for j in range(1,len(indx)):
+            temp_box = unionBox(temp_box, bbox[indx[j],:])
+            temp_mask = unionMask(temp_mask, mask[indx[j],...])
+        bbox_new.append(temp_box)
+        mask_new.append(temp_mask)
+    
+    mask_new = np.array(mask_new)
+    bbox_new = np.array(bbox_new)
+    return bbox_new, mask_new

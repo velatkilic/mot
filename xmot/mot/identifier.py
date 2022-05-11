@@ -1,5 +1,5 @@
 import cv2 as cv
-from xmot.mot.utils import drawBox, drawBlobs, writeBlobs
+from xmot.mot.utils import drawBox, drawBlobs, writeBlobs, mergeBoxes
 from xmot.mot.kalman import MOT
 from xmot.mot.detectors import DNN
 from xmot.datagen.bead_gen import bead_data_to_file, BeadDatasetFile, collate_fn
@@ -7,6 +7,7 @@ from xmot.datagen.style_data_gen_mask import StyleDatasetGen
 import os
 from xmot.logger import Logger
 from torch.utils.data import DataLoader
+import numpy as np
 
 def identify(dset, imgOutDir, blobsOutFile, modelType="DNN", model=None, train_set=None, device="cuda:0", num_workers=0):
     """
@@ -61,9 +62,45 @@ def identify(dset, imgOutDir, blobsOutFile, modelType="DNN", model=None, train_s
         print("Folder already exists, overwriting contents ... ")
 
     Logger.detail("Detecting particles ...")
-    for i in range(dset.length()):
+    
+    for i in range(dset.length()-1):
         img = dset.get_img(i)
         bbox, mask = model.predict(img)
+        
+        # optical flow
+        mask = mask.astype(np.bool)
+        if len(img.shape)==3:
+            cur = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
+            nxt = cv.cvtColor(dset.get_img(i+1),cv.COLOR_BGR2GRAY)
+        else:
+            cur = img
+            nxt = dset.get_img(i+1)
+        flow = cv.calcOpticalFlowFarneback(cur,nxt, None, pyr_scale=0.5, levels=5, 
+                                           winsize=15, iterations=3, poly_n=5,
+                                           poly_sigma=1.2, flags=0)
+        mag, ang = cv.cartToPolar(flow[...,0], flow[...,1])
+        
+        # Merge
+        npar = len(bbox)
+        
+        # Average speed for each particle
+        # cen   = np.zeros((npar,2)) # center position
+        speed = np.zeros((npar,))  # average speed around the center
+        for j in range(npar):
+            # cen[j,:] = np.array([bbox[j,0] + bbox[j,2],          # x
+            #                      bbox[j,1] + bbox[j,3]]) / 2.    # y
+            # indxs = (xx-cen[j,0])**2 + (yy-cen[j,1])**2 <= r*r
+            # indxs = np.logical_and(indxs, mask[j,...])
+            speed[j] = np.mean(mag[mask[j,0,:,:]])
+        
+        # normalize speeds (useful for plotting later)
+        max_speed = np.max(speed)
+        speed     = speed/max_speed
+        th_speed=0.2
+        th_dist=2
+        it =2
+        mask, bbox, _ = mergeBoxes(mask, bbox, speed, mag, max_speed, th_speed, th_dist, it)
+        
         # Draw bounding boxes
         cont = drawBox(img.copy(), bbox)
 
