@@ -8,7 +8,7 @@ import os
 from xmot.logger import Logger
 from torch.utils.data import DataLoader
 
-def identify(dset, imgOutDir, blobsOutFile, modelType="DNN", model=None, train_set=None, device="cuda:0"):
+def identify(dset, imgOutDir, blobsOutFile, modelType="DNN", model=None, train_set=None, device="cuda:0", num_workers=0):
     """
     Identify particles using specified model.
 
@@ -44,7 +44,7 @@ def identify(dset, imgOutDir, blobsOutFile, modelType="DNN", model=None, train_s
         for d in train_set:
             print("Train set: " + d)
             d = BeadDatasetFile(d)
-            train_dataloader = DataLoader(d, batch_size=2, shuffle=True, collate_fn=collate_fn, num_workers=4)
+            train_dataloader = DataLoader(d, batch_size=2, shuffle=True, collate_fn=collate_fn, num_workers=num_workers)
             model.train(train_dataloader)
 
         # save model
