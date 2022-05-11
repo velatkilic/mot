@@ -31,7 +31,7 @@ setuptools.setup(
         "opencv-contrib-python",
         "imageio",
         "imageio-ffmpeg",
-        "crefi",
+        # "crefi",
         "pycocotools",
         "Pillow",
         "click",
