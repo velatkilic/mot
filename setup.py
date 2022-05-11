@@ -20,8 +20,9 @@ setuptools.setup(
     #     "License :: OSI Approved :: MIT License",
     #     "Operating System :: OS Independent",
     # ],
-    package_dir={"": "xmot"},
-    packages=setuptools.find_packages(where="xmot"),
+    #package_dir={"": "xmot"},
+    #packages=setuptools.find_packages(where="xmot"),
+    packages= ["xmot", "xmot.analyzer", "xmot.datagen", "xmot.digraph", "xmot.mot"],
     # python_requires=">=3.6",
     install_requires = [
         "numpy",
