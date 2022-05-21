@@ -7,7 +7,7 @@ import numpy as np
 import cv2 as cv
 import pickle
 
-from src.logger import Logger
+from xmot.logger import Logger
 # from src.mot.utils import mergeBoxes
 # from src.datagen.bead_gen import BeadDataset
 # from src.datagen.style_data_gen_mask import StyleDataset

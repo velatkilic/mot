@@ -1,7 +1,7 @@
 from unittest import TestCase
 
-from src.dataset import Dataset
-from src.mot.identifier import identify
+from xmot.dataset import Dataset
+from xmot.mot.identifier import identify
 import os
 
 

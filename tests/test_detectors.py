@@ -1,8 +1,8 @@
 from unittest import TestCase
 import os
 
-from src.dataset import Dataset
-from src.mot.detectors import *
+from xmot.dataset import Dataset
+from xmot.mot.detectors import *
 
 
 class TestDNN(TestCase):

@@ -6,7 +6,7 @@ Kalman class using opencv implementation
 import cv2 as cv
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-from src.mot.utils import cen2cor, cor2cen, costCalc, unionBlob, iom
+from xmot.mot.utils import cen2cor, cor2cen, costCalc, unionBlob, iom
 
 class Blob:
     """
@@ -74,7 +74,7 @@ class Blob:
         return self.kalm.statePost
 
 class MOT:
-    def __init__(self, bbox, mask, fixed_cost=100., merge=True, merge_it=2, merge_th=50):
+    def __init__(self, bbox, mask, fixed_cost=100., merge=False, merge_it=2, merge_th=50):
         self.total_blobs = 0
         self.cnt         = 0              # Frame id
         self.blobs       = []             # List of all blobs (idenfied particle)

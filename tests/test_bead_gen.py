@@ -1,5 +1,5 @@
 import unittest
-from src.datagen.bead_gen import Beads, bead_data_to_file, numpy_to_maskrcnn_target, read_target_from_file
+from xmot.datagen.bead_gen import Beads, bead_data_to_file, numpy_to_maskrcnn_target, read_target_from_file
 import os
 import scipy.io as sio
 

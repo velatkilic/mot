@@ -5,13 +5,13 @@ import copy
 from PIL import Image, ImageDraw, ImageFont
 from src.analyzer.shapeDetector import ShapeDetector
 
-from src.logger import Logger
-from src.digraph.node import Node
-from src.digraph.trajectory import Trajectory
-from src.digraph.particle import Particle
-import src.digraph.commons as commons
-import src.digraph.utils as utils
-from src.digraph.utils import BACK_TRACE_LIMIT
+from xmot.logger import Logger
+from xmot.digraph.node import Node
+from xmot.digraph.trajectory import Trajectory
+from xmot.digraph.particle import Particle
+import xmot.digraph.commons as commons
+import xmot.digraph.utils as utils
+from xmot.digraph.utils import BACK_TRACE_LIMIT
 
 class Digraph:
     """

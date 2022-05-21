@@ -1,6 +1,6 @@
 import unittest
-from src.datagen.style_data_gen_mask import StyleDatasetGen
-from src.dataset import Dataset
+from xmot.datagen.style_data_gen_mask import StyleDatasetGen
+from xmot.dataset import Dataset
 import os
 
 
