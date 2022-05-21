@@ -526,5 +526,7 @@ class Digraph:
             string += str(traj) + os.linesep
         for node in self.nodes:
             string += str(node) + os.linesep
+        for p in self.ptcls:
+            string += str(p) + os.linesep
         string.strip()
         return string

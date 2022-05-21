@@ -81,9 +81,11 @@ class Particle:
 
     def __str__(self) -> str:
         string = "Particle_id : {:4d}; Time_frame: {:4d}; ".format(self.id, self.time_frame) + \
-                 "(x, y): ({:5.1f}, {:5.1f}); ".format(self.position[0], self.position[1]) + \
-                 "Predicted (x, y): ({:5.1f}, {:5.1f}); ".format(self.predict_pos[0], 
+                 "x, y: {:5.1f}, {:5.1f}; ".format(self.position[0], self.position[1]) + \
+                 "Predicted x, y: {:5.1f}, {:5.1f}; ".format(self.predict_pos[0], 
                                                                  self.predict_pos[1]) + \
+                 "Size: {:6.2f}; ".format(self.get_size()) + \
+                 "Shape: {:12s}; ".format(self.shape) + \
                  "Has_bubble: {:5s}".format(str(self.bubble == None))
         return string
     

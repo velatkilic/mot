@@ -324,5 +324,6 @@ class Trajectory:
                  "Start time: {:4d}; ".format(self.get_start_time()) + \
                  "End time: {:4d}; ".format(self.get_end_time()) + \
                  "Average size: {:6.2f}; ".format(self.get_average_particle_size()) + \
-                 "Average velocity: {:6.2f}".format(self.get_velocity())
+                 "Average velocity: {:6.2f}; ".format(self.get_velocity()) + \
+                 "Shape: {:12s}".format(self.ptcls[0].get_shape())
         return string
