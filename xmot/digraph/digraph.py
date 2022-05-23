@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 import copy
 from PIL import Image, ImageDraw, ImageFont
-from src.analyzer.shapeDetector import ShapeDetector
+from xmot.analyzer.shapeDetector import ShapeDetector
 
 from xmot.logger import Logger
 from xmot.digraph.node import Node

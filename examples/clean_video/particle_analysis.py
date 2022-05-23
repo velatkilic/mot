@@ -5,10 +5,10 @@ import numpy as np
 import sys
 sys.path.append("/mnt/d/JHU/Research/Machine_Learning_Characterization/code/mot/")
 
-from src.digraph.digraph import Digraph
-from src.digraph.utils import load_blobs_from_text, collect_images, paste_images, generate_video
-from src.digraph import commons
-from src.logger import Logger
+from xmot.digraph.digraph import Digraph
+from xmot.digraph.utils import load_blobs_from_text, collect_images, paste_images, generate_video
+from xmot.digraph import commons
+from xmot.logger import Logger
 
 output_dir = "./"
 blobsFile = os.path.join(output_dir, "blobs.txt")

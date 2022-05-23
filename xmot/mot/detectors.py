@@ -8,9 +8,9 @@ import cv2 as cv
 import pickle
 
 from xmot.logger import Logger
-# from src.mot.utils import mergeBoxes
-# from src.datagen.bead_gen import BeadDataset
-# from src.datagen.style_data_gen_mask import StyleDataset
+# from xmot.mot.utils import mergeBoxes
+# from xmot.datagen.bead_gen import BeadDataset
+# from xmot.datagen.style_data_gen_mask import StyleDataset
 
 import torch
 import torchvision
