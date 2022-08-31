@@ -6,11 +6,11 @@ from xmot.digraph.utils import load_blobs_from_text
 from xmot.digraph.particle import Particle
 from xmot.logger import Logger
 
-LEGIT_CLOSED_CONTOUR_AREA_RATIO = 0.5     # A legit closed contour must take up at least 50% of the crop area.
+LEGIT_CLOSED_CONTOUR_AREA_RATIO = 0.30     # A legit closed contour must take up at least 50% of the crop area.
 LEGIT_CONTOUR_AREA_MIN = 64   # Least permitted area for a contour to be considered as a contour
                               # of a solid particle, instead of contour of a partial boundary
                               # of a hollow shell.
-BBOX_BUFFER_MIN = 3           # 3 pixels as buffer of bbox for contour detection.
+BBOX_BUFFER_MIN = 2           # 2 pixels as buffer of bbox for contour detection.
 BBOX_BUFFER_MAX = 5           # Max permitted value of buffer for expanding crop of particle to detect
                               # a valid contour. (Contour cannot be detected if the particle contact 
                               # the edge of crop of the img)
@@ -100,66 +100,6 @@ def detect_shape(self, particle: Particle, img) -> str:
     # Most likely the particle is on the edge of the video frame and no contour can be detected.
     return "undetermined"
 
-#def detect_shape_obsolete(self, particle: Particle, img) -> str:
-#    x, y = particle.get_position()
-#    w, h = particle.get_bbox()
-#
-#    #print(x, y)
-#    # 1. Cut image out
-#    # TODO: add a loop to gradually enlarge the bbox.
-#    
-#    # Coordinates of upper left corner of the crop
-#    x1 = x - BBOX_BUFFER if x - BBOX_BUFFER >= 0 else 0
-#    y1 = y - BBOX_BUFFER if y - BBOX_BUFFER >= 0 else 0
-#
-#    # Coordinates of lower right corner of the crop
-#    x2 = x + w + BBOX_BUFFER \
-#        if x + w + BBOX_BUFFER <= img.shape[0] else img.shape[0]
-#    y2 = y + h + BBOX_BUFFER \
-#        if y + h + BBOX_BUFFER <= img.shape[1] else img.shape[1] 
-#    #print(x1, y1, x2, y2)
-#    cropped_img = img[y1:y2, x1:x2, :]  # First index is row, which is y in the x-y coordinate sense!
-#    cropped_img_binary = binary_threshold(cropped_img)
-#    
-#    # 2. Get contour
-#    cv.imwrite("./p_{:d}.jpg".format(particle.get_id()), cropped_img_binary)
-#    contour, bbox = detect_contour(cropped_img_binary)
-#    cv.drawContours(cropped_img, contour, -1, [0, 0, 255], 1)
-#    cv.imwrite("./p_{:d}_with_contour.jpg".format(particle.get_id()), cropped_img)
-#    
-#    # 3. Calculate ratio of contour length and area
-#    #if len(contours) > 1:
-#    #    print("Number of contours in the cropped image are: " + str(len(contours)))
-#    perimeter = cv.arcLength(contour, True)
-#    area = cv.contourArea(contour)
-#    p2a_ratio = perimeter ** 2 / area  # Take square to normalize
-#    print(p2a_ratio)
-#    shape = "circle"
-#    if p2a_ratio > 4 * math.pi + P2A_RATIO_THRESHOLD:
-#        shape = "non-circle"
-#    return shape
-#
-#def detect_contour(img):
-#    """
-#    Attribute:
-#        img Input cropped image in Opencv format with only one object.
-#
-#    Return:
-#        contour of the particle in the given image crop.
-#        Array of [x, y, w, h] defining the bounding rectangulars.
-#    """
-#    contours, hierarchy = cv.findContours(img, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
-#    #print(len(contours))
-#    contour = contours.pop(0)  # The first contour is the entire image. Remove.
-#    if len(contours) == 0:
-#        Logger.warning("Failed to find contour of a particle. " +
-#                        "The shape detection might be that of the bbox.")
-#    else:
-#        contour = contours.pop(0)
-#
-#    x, y, w, h = cv.boundingRect(contour)
-#    return contour, [x, y, w, h]
-
 def detect_contours(img, is_grayscale = True):
     """
     Note:
@@ -198,7 +138,7 @@ def adaptive_threshold(img, method = cv.ADAPTIVE_THRESH_MEAN_C, blocksize = 15, 
     img_threshold = cv.adaptiveThreshold(img, 255, method, cv.THRESH_BINARY, blocksize, offset)
     return img_threshold
 
-def crop_particle(particle, img, is_grayscale = False, buffer = 3):
+def crop_particle(particle, img, is_grayscale = False, buffer = 2):
     """
     Args:
         particle    Particle \n
