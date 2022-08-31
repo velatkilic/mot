@@ -11,9 +11,10 @@ class Particle:
                                     corner of bbox
         predicted_pos  : [int, int] Kalmen filter predicted x, y positions in pixels
                                     of the upper left corner of bbox
-        bbox           : [int, int] Weight and height in pixels of the bbox
+        bbox           : [int, int] Width (in x) and height (in y) in pixels of the bbox
         bubble         : Particle   Partible object representing the bubble. It only 
                                     needs position, bbox.
+        shape          : str        Shape of particle. Permitted values are "circle", "non-circle".
     """
 
     def __init__(self, id, time_frame, position: List[int], \
@@ -27,7 +28,7 @@ class Particle:
         #self.y = self.position[1]
         self.bbox = bbox  # length and width of identifying box around particle.
         self.size = bbox[0] * bbox[1]
-        self.bubble = bubble    # boolean value for whether has bubble in particle
+        self.bubble = bubble
         self.shape = shape
 
     def set_id(self, id):
@@ -70,7 +71,7 @@ class Particle:
     def set_bubble(self, bubble):
         self.bubble = bubble
     
-    def has_bubble(self):
+    def have_bubble(self):
         return self.bubble == None
 
     def set_shape(self, shape: str):

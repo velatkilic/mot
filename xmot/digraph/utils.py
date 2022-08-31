@@ -151,13 +151,12 @@ def collect_images(dir: str, prefix: str, ext: str, start: int, end: int) \
             files.remove("{:s}{:d}.{:s}".format(prefix, i, ext))
 
     if end != sys.maxsize:
-        for i in range(end + 1, numbers[-1]): # end is inclusive
+        for i in range(end + 1, numbers[-1] + 1): # end is inclusive
             files.remove("{:s}{:d}.{:s}".format(prefix, i, ext))
-
     images = [Image.open(path.join(dir, f)) for f in files]
     return images
 
-def paste_images(left_imgs: List[Image.Image], right_imgs: List[Image.Image], dest, write_img) \
+def paste_images(left_imgs: List[Image.Image], right_imgs: List[Image.Image], dest, write_img, ids=None) \
     -> List[Image.Image]:
 
     images = []
@@ -171,7 +170,10 @@ def paste_images(left_imgs: List[Image.Image], right_imgs: List[Image.Image], de
         im.paste(left_imgs[i], box=(0, 0)) # top left cornor of the box to paste the picture.
         im.paste(right_imgs[i], box=(left_imgs[i].width + 1, 0))
         if write_img:
-            im.save(path.join(dest, "merged_{:d}.png".format(i)))
+            if ids != None:
+                im.save(path.join(dest, "merged_{:d}.png".format(ids[i])))
+            else:
+                im.save(path.join(dest, "merged_{:d}.png".format(i)))
         images.append(im)
     return images
 
