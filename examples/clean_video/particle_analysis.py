@@ -2,19 +2,18 @@ import os
 import cv2 as cv
 import numpy as np
 
-import sys
-sys.path.append("/mnt/d/JHU/Research/Machine_Learning_Characterization/code/mot/")
-
 from xmot.digraph.digraph import Digraph
 from xmot.digraph.utils import load_blobs_from_text, collect_images, paste_images, generate_video
 from xmot.digraph import commons
 from xmot.logger import Logger
 
-output_dir = "./"
-blobsFile = os.path.join(output_dir, "blobs.txt")
-video = os.path.join(output_dir, "test_trim.mp4")
-detection_img_dir = os.path.join(output_dir, "detection")
+# Input Parameters
+output_dir = "./"                     # Path to folder to write output.
+blobsFile = "./blobs.txt"             # Path to the output file from particle_detection.py
+video = "./test_trim.mp4"             # Path to the video
+detection_img_dir = os.path.join(output_dir, "detection") # Path to the "detection" folder from particle_detection.py
 
+# Initiate parameters
 reproduce_img_dir = os.path.join(output_dir, "reproduced")
 merged_img_dir = os.path.join(output_dir, "merged")
 os.makedirs(reproduce_img_dir, exist_ok=True)
@@ -28,7 +27,8 @@ commons.PIC_DIMENSION = [512, 512]
 dg.add_video(particles) # Load particles identified in the video.
 dg.detect_particle_shapes(video)
 
-Logger.detail("Detailed information of digraph: \n" + str(dg))
+# Write to terminal the detailed information of the digraph.
+Logger.basic("Detailed information of digraph: \n" + str(dg))
 
 Logger.basic("Drawing reproduced images ...")
 draw_id = True

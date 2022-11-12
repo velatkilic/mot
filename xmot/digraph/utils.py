@@ -5,6 +5,8 @@ import pandas as pd
 from os import path, listdir
 from PIL import Image
 import cv2 as cv
+from skimage import exposure
+import numpy as np
 
 from xmot.logger import Logger
 from xmot.digraph.particle import Particle
@@ -79,54 +81,6 @@ def traj_distance(t1, t2) -> float:
                     break
         return min_dist
 
-def load_blobs_from_excel(file_name: str) -> List[Particle]:
-    """ A temporary io function to load data from Kerri-Lee's excel data.
-
-    The function assumes a specific format of the excel data, and will be replaced by more 
-    general format later.
-    """
-    data_id = pd.read_excel(file_name, sheet_name="Particle ID", engine="openpyxl")
-    data_pos = pd.read_excel(file_name, sheet_name="Raw_data", engine="openpyxl")
-
-    # remove N/A
-    data_id = data_id.fillna(0).astype(int)
-
-    particles = []
-    for i in range(0, len(data_id)):
-        row_id = data_id.loc[i]
-        row_pos = data_pos.loc[i]
-
-        row_id = row_id[row_id.gt(0)]
-        if len(row_id) <= 1:
-            # Has only "Act_frame" column and no ided particle in this frame.
-            continue
-
-        time_frame = row_id["Act_frame"]
-        # Iterate all particles ided in this frame
-        for j in range(1, len(row_id)):   
-            id = row_id[j]
-            pos = [row_pos[2 * id], row_pos[2 * id + 1]]
-            # Has no bubble info and predicted positions for now.
-            particles.append(Particle(id, time_frame, pos))
-    
-    return particles
-
-def load_blobs_from_text(file_name: str) -> List[Particle]:
-    particles = []
-    with open(file_name, "r") as f:
-        for line in f:
-            terms = line.replace(" ", "").split(",")
-            terms = [int(term) for term in terms]
-            if len(terms) < 8:
-                Logger.warning("Invalid blob info: {:s}".format(line))
-            else:
-                position = [terms[0], terms[1]]   # x1, y1
-                bbox = [terms[4], terms[5]]       # width, height
-                idx = terms[6]
-                time_frame = terms[7]
-                particles.append(Particle(idx, time_frame, position, bbox=bbox))
-    return particles
-
 def extract_images(video: str, to_gray = False):
     images = []
     video_cap = cv.VideoCapture(video)
@@ -151,13 +105,12 @@ def collect_images(dir: str, prefix: str, ext: str, start: int, end: int) \
             files.remove("{:s}{:d}.{:s}".format(prefix, i, ext))
 
     if end != sys.maxsize:
-        for i in range(end + 1, numbers[-1]): # end is inclusive
+        for i in range(end + 1, numbers[-1] + 1): # end is inclusive
             files.remove("{:s}{:d}.{:s}".format(prefix, i, ext))
-
     images = [Image.open(path.join(dir, f)) for f in files]
     return images
 
-def paste_images(left_imgs: List[Image.Image], right_imgs: List[Image.Image], dest, write_img) \
+def paste_images(left_imgs: List[Image.Image], right_imgs: List[Image.Image], dest, write_img, ids=None) \
     -> List[Image.Image]:
 
     images = []
@@ -171,7 +124,10 @@ def paste_images(left_imgs: List[Image.Image], right_imgs: List[Image.Image], de
         im.paste(left_imgs[i], box=(0, 0)) # top left cornor of the box to paste the picture.
         im.paste(right_imgs[i], box=(left_imgs[i].width + 1, 0))
         if write_img:
-            im.save(path.join(dest, "merged_{:d}.png".format(i)))
+            if ids != None:
+                im.save(path.join(dest, "merged_{:d}.png".format(ids[i])))
+            else:
+                im.save(path.join(dest, "merged_{:d}.png".format(i)))
         images.append(im)
     return images
 
@@ -206,3 +162,11 @@ def generate_video(images, output: str, fps: int = 24,
         video.write(i)
     video.release() # generate video.
     cv.destroyAllWindows()
+
+def contrast_stretch(img, saturation=2.0):
+    """
+    Simple linear contrast enhancement. See reference: https://homepages.inf.ed.ac.uk/rbf/HIPR2/stretch.htm
+    """
+    lower_limit, upper_limit = np.percentile(img, (saturation, 100 - saturation))
+    img_stretched = exposure.rescale_intensity(img, in_range=(lower_limit, upper_limit))
+    return img_stretched

@@ -7,7 +7,7 @@ class Logger:
     DETAIL=3
     DEBUG=4
 
-    io_level = 0
+    io_level = 1
 
     @classmethod
     def set_io_level(cls, lev):

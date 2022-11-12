@@ -344,7 +344,7 @@ def mergeBoxes(mask, bbox, speed, mag, max_speed, th_speed, th_dist, it):
                     bbox_new[cursor_left] = unionBox(bbox1, bbox2)
 
                     # calculate new speed
-                    speed_new[cursor_left] = np.mean(mag[mask_new[cursor_left]]) / max_speed
+                    speed_new[cursor_left] = np.mean(mag[mask_new[cursor_left][0]]) / max_speed
 
                     # pop merged data from lists
                     mask_new.pop(cursor_right)

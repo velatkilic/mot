@@ -298,7 +298,7 @@ class Trajectory:
         """
         sum = 0
         for p in self.ptcls:
-            sum += p.get_size()
+            sum += p.get_area()
         return sum / len(self.ptcls)
 
     def predict_next_location(self) -> List[float]:

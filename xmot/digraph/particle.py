@@ -4,31 +4,37 @@ class Particle:
     """Particles recorded in combustion videos.
     
     Attributes:
+        position       : [int, int] x, y positions in pixels of the upper left 
+                                    corner of bbox
+        bbox           : [int, int] Width (in x) and height (in y) in pixels of the bbox
+    (Optional:)
         id             : int        ID of a particle
         time_frame     : int        Frame number of a particle in the video. It's used
                                     as time unit in the diagraph.
-        position       : [int, int] x, y positions in pixels of the upper left 
-                                    corner of bbox
         predicted_pos  : [int, int] Kalmen filter predicted x, y positions in pixels
                                     of the upper left corner of bbox
-        bbox           : [int, int] Weight and height in pixels of the bbox
         bubble         : Particle   Partible object representing the bubble. It only 
                                     needs position, bbox.
+        shape          : str        Shape of particle. Permitted values are "circle", "non-circle".
+        type           : str        Type of particle. "agglomerate", "shell", "particle".
+                                    "shell": hollow shell; "particle": single solid particle.
+        path_img       : str        Path to the source image.
     """
 
-    def __init__(self, id, time_frame, position: List[int], \
-                 predicted_pos: List[int]=[0,0], bbox = [0, 0],
-                 bubble=None, shape="non-circle"):
+    def __init__(self, position: List[int], bbox: List[int], id = -1, time_frame = -1, \
+                 predicted_pos: List[int] = [0,0], bubble=None, shape="", type="", path_img=""):
+        self.position = position
+        self.bbox = bbox  # Width and height of bounding box.
         self.id = id
         self.time_frame = time_frame
-        self.position = position
         self.predict_pos = predicted_pos
         #self.x = self.position[0]
         #self.y = self.position[1]
-        self.bbox = bbox  # length and width of identifying box around particle.
-        self.size = bbox[0] * bbox[1]
-        self.bubble = bubble    # boolean value for whether has bubble in particle
+        self.area = bbox[0] * bbox[1]
+        self.bubble = bubble
         self.shape = shape
+        self.type = type
+        self.path_img = path_img
 
     def set_id(self, id):
         self.id = id
@@ -59,34 +65,55 @@ class Particle:
 
     def set_bbox(self, bbox):
         self.bbox = bbox
-        self.size = self.bbox[0] * self.bbox[1]
+        self.area = self.bbox[0] * self.bbox[1]
 
     def get_bbox(self):
         return self.bbox
     
-    def get_size(self):
-        return self.size
+    def get_bbox_torch(self):
+        """
+        Return [x1, y1, x2, y2]
+        """
+        return [self.position[0], self.position[1], self.position[0] + self.bbox[0], self.position[1] + self.bbox[1]]
+    
+    def get_area(self):
+        return self.area
 
     def set_bubble(self, bubble):
         self.bubble = bubble
     
-    def has_bubble(self):
-        return self.bubble == None
+    def have_bubble(self):
+        return self.bubble != None
 
     def set_shape(self, shape: str):
         self.shape = shape
 
     def get_shape(self):
         return self.shape
+    
+    def get_type(self):
+        return self.type
+
+    def get_label(self):
+        label = self.type
+        if self.type == "particle":
+            if self.bubble == None:
+                return "{:s}_{:s}_{:s}".format(self.type, "no-bubble", self.shape)
+            else:
+                return "{:s}_{:s}_{:s}".format(self.type, "bubble", self.shape)
+        elif self.type == "shell":
+            return "{:s}_{:s}".format(self.type, self.shape)
+        elif self.type == "agglomerate":
+            return "agglomerate"
+        
+        return ""
 
     def __str__(self) -> str:
         string = "Particle_id : {:4d}; Time_frame: {:4d}; ".format(self.id, self.time_frame) + \
                  "x, y: {:5.1f}, {:5.1f}; ".format(self.position[0], self.position[1]) + \
-                 "Predicted x, y: {:5.1f}, {:5.1f}; ".format(self.predict_pos[0], 
-                                                                 self.predict_pos[1]) + \
-                 "Size: {:6.2f}; ".format(self.get_size()) + \
+                 "Area: {:6.2f}; ".format(self.get_area()) + \
                  "Shape: {:12s}; ".format(self.shape) + \
-                 "Has_bubble: {:5s}".format(str(self.bubble == None))
+                 "Has_bubble: {:5s}".format(str(self.bubble != None))
         return string
     
     def __repr__(self) -> str:

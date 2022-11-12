@@ -67,6 +67,9 @@ def identify(dset, imgOutDir, blobsOutFile, modelType="DNN", model=None, train_s
         img = dset.get_img(i)
         bbox, mask = model.predict(img)
         
+        if len(bbox) == 0: # No particles have been detected in this frame
+            continue
+
         # optical flow
         mask = mask.astype(np.bool)
         if len(img.shape)==3:

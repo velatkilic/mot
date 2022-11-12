@@ -207,7 +207,7 @@ class Node:
         """
         string = "Node: Type: {:15s}; Incoming trajectories id: ".format(self.get_type())
         string += "{:16s}".format(",".join([str(traj.id) for traj in self.in_trajs]))
-        string += "Outgoing trajectories id: "
+        string += "; Outgoing trajectories id: "
         string += "{:16s}".format(",".join([str(traj.id) for traj in self.out_trajs]))
         #for traj in self.in_trajs:
         #    string += str(traj.id) + ","
