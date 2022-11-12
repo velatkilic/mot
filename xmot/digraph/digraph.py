@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 import copy
 from PIL import Image, ImageDraw, ImageFont
-from xmot.analyzer.shapeDetector import ShapeDetector
+import xmot.analyzer.shapeDetector as shape_detector
 
 from xmot.logger import Logger
 from xmot.digraph.node import Node
@@ -330,10 +330,14 @@ class Digraph:
                         # Id number in red.
                         draw.text(text_xy, str(p.get_id()), (255, 0, 0), stroke_width=2)
                     if draw_shape:
-                        text_xy = (p.position[0] + p.bbox[0] + 5, p.position[1] - 5)
-                        # Id number in red.
-                        shape = p.get_shape()[0].upper()
-                        draw.text(text_xy, str(shape), (255, 0, 0), stroke_width=2)
+                        if p.get_shape() == "":
+                            Logger.debug("Want to draw shape for particle, but missing shape information." \
+                                         "id {:d} time-frame {:d}".format(p.get_id(), p.get_time_frame()))
+                        else:
+                            text_xy = (p.position[0] + p.bbox[0] + 5, p.position[1] - 5)
+                            # Id number in red.
+                            shape = p.get_shape()[0].upper()
+                            draw.text(text_xy, str(shape), (255, 0, 0), stroke_width=2)
             if write_img:
                 im.save("{:s}/reproduced_{:d}.png".format(dest, t)) # JPG doesn't support alpha
             images.append(im)
@@ -511,7 +515,7 @@ class Digraph:
         Args:
             video   String  Path to the original video file.
         """
-        shape_detector = ShapeDetector()
+        
         images = utils.extract_images(video, to_gray=True)
         for p in self.ptcls:
             shape = shape_detector.detect_shape(p, images[p.get_time_frame()])

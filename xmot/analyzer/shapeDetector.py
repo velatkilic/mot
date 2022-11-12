@@ -2,25 +2,26 @@ import math
 import cv2 as cv
 from matplotlib.pyplot import draw
 import numpy as np
-from xmot.digraph.utils import load_blobs_from_text
+from xmot.digraph.parser import load_blobs_from_text
 from xmot.digraph.particle import Particle
 from xmot.logger import Logger
 
 LEGIT_CLOSED_CONTOUR_AREA_RATIO = 0.30     # A legit closed contour must take up at least 50% of the crop area.
-LEGIT_CONTOUR_AREA_MIN = 64   # Least permitted area for a contour to be considered as a contour
+LEGIT_CONTOUR_AREA_MIN = 50   # Least permitted area for a contour to be considered as a contour
                               # of a solid particle, instead of contour of a partial boundary
                               # of a hollow shell.
+CONFIDENT_PARTICLE_AREA = 100
 BBOX_BUFFER_MIN = 2           # 2 pixels as buffer of bbox for contour detection.
 BBOX_BUFFER_MAX = 5           # Max permitted value of buffer for expanding crop of particle to detect
                               # a valid contour. (Contour cannot be detected if the particle contact 
                               # the edge of crop of the img)
-THRESHOLD_A2P_RATIO = 0.9     # Lower threshold of normalized Area-to-perimeter ratio for a shape
+THRESHOLD_A2P_RATIO = 0.85     # Lower threshold of normalized Area-to-perimeter ratio for a shape
                               # to be considered as a circle. For perfect circle, a2p ratio is 1.
 THRESHOLD_CIRCULAR_DEGREE = 0.5 # Threshold of param2 in Hough Circle transformation to consider
                                 # detected circles as valid.
 
 
-def detect_shape(self, particle: Particle, img) -> str:
+def detect_shape(particle: Particle, img) -> str:
     buffer = BBOX_BUFFER_MIN
     while (buffer < BBOX_BUFFER_MAX):
         img_crop = crop_particle(particle, img, buffer)
@@ -97,7 +98,9 @@ def detect_shape(self, particle: Particle, img) -> str:
             return "non-circle" # Cannot find a circle with permitted circular degree larger than
                                 # THRESHOLD_CIRCULAR_DEGREE. It's non-circle.
                 
-    # Most likely the particle is on the edge of the video frame and no contour can be detected.
+    # 1. no contour can be detected.
+    if particle.get_area() < CONFIDENT_PARTICLE_AREA:
+        return "undertermined_too_small"
     return "undetermined"
 
 def detect_contours(img, is_grayscale = True):
