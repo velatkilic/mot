@@ -107,7 +107,9 @@ def collect_images(dir: str, prefix: str, ext: str, start: int, end: int) \
     if end != sys.maxsize:
         for i in range(end + 1, numbers[-1] + 1): # end is inclusive
             files.remove("{:s}{:d}.{:s}".format(prefix, i, ext))
-    images = [Image.open(path.join(dir, f)) for f in files]
+    images = []
+    for f in files:
+        images.append(Image.open(path.join(dir, f)))
     return images
 
 def paste_images(left_imgs: List[Image.Image], right_imgs: List[Image.Image], dest, write_img, ids=None) \

@@ -76,6 +76,9 @@ class Particle:
         """
         return [self.position[0], self.position[1], self.position[0] + self.bbox[0], self.position[1] + self.bbox[1]]
     
+    def get_area_bbox(self):
+        return self.bbox[0] * self.bbox[1]
+    
     def get_area(self):
         return self.area
 
