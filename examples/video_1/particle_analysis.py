@@ -11,7 +11,7 @@ from xmot.logger import Logger
 # User Input Parameters
 output_dir = "./"                     # Path to folder to write output.
 blobsFile = "./blobs.txt"             # Path to the output file from particle_detection.py
-video = "./example.mp4"             # Path to the video
+video = "./example.mp4"               # Path to the video
 detection_img_dir = os.path.join(output_dir, "detection") # Path to the "detection" folder from particle_detection.py
 commons.PIC_DIMENSION = [512, 512]    # Crop of the video. Delete this line if no cropping is wanted.
 
