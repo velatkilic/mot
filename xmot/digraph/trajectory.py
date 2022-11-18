@@ -86,12 +86,12 @@ class Trajectory:
         """
         if self.id != particle.id:
             if not merge:
-                Logger.warning("Cannot add particle! New particle has different "
+                Logger.debug("Cannot add particle! New particle has different "
                                "id as the existing particles: " +
                                "{:d} {:d}".format(particle.id, self.id))
                 return False
             elif self.has_particle(particle.time_frame):
-                Logger.warning("Cannot add particle! Particle already exists at this time frame: " +
+                Logger.debug("Cannot add particle! Particle already exists at this time frame: " +
                                "{:d} {:d} {:d}".format(particle.time_frame, self.id, particle.id))
                 return False
             else:
@@ -190,7 +190,7 @@ class Trajectory:
         if time in self.ptcl_time_map.keys():
             return self.ptcl_time_map[time].get_position()
         elif len(self.ptcls) < 2:
-            Logger.warning("Cannot backtrace or predict position for trajectory eixsting for " \
+            Logger.debug("Cannot backtrace or predict position for trajectory eixsting for " \
                            "only one frame.")
             return None
         elif min(self.ptcl_time_map.keys()) - time <= BACK_TRACE_LIMIT:

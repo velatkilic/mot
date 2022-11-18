@@ -196,11 +196,11 @@ class Digraph:
 
     def add_edge(self, start, end):
         if start not in self.__in_nodes or start not in self.__out_nodes:
-            Logger.warning("Trying to add an edge for a non-existing node {:s}".format(start.to_str()))
+            Logger.debug("Trying to add an edge for a non-existing node {:s}".format(start.to_str()))
             self.add_node(start)
         
         if end not in self.__in_nodes or end not in self.__out_nodes:
-            Logger.warning("Trying to add an edge for a non-existing node {:s}".format(start.to_str()))
+            Logger.debug("Trying to add an edge for a non-existing node {:s}".format(start.to_str()))
             self.add_node(end)
 
         self.__in_nodes[end].append(start)

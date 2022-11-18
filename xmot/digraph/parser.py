@@ -58,7 +58,7 @@ def load_blobs_from_text(file_name: str) -> List[Particle]:
                         (x1 > commons.PIC_DIMENSION[0] and x2 > commons.PIC_DIMENSION[0]) or \
                         (y1 < 0 and y2 < 0) or \
                         (y1 > commons.PIC_DIMENSION[1] and y2 > commons.PIC_DIMENSION[1]):
-                    Logger.warning("Invalid particle. Coordinates outside the image. {:d} {:d} {:d} {:d}".format(x1, y1, x2, y2))
+                    Logger.debug("Invalid particle. Coordinates outside the image. {:d} {:d} {:d} {:d}".format(x1, y1, x2, y2))
                     continue  # Skip this particle. Invalid.
 
                 x1_new = x1 if x1 >= 0 else 0
@@ -69,7 +69,7 @@ def load_blobs_from_text(file_name: str) -> List[Particle]:
                 width_new = x2_new - x1_new
                 height_new = y2_new - y1_new
                 if width <=0 or height <=0:
-                    Logger.warning("Invalid particle. Non-positive width or height. {:d} {:d} {:d} {:d}".format(x1, y1, x2, y2))
+                    Logger.debug("Invalid particle. Non-positive width or height. {:d} {:d} {:d} {:d}".format(x1, y1, x2, y2))
                     continue
                 particles.append(Particle([x1_new, y1_new], bbox=[width_new, height_new], id=id, time_frame=time_frame))
     return particles

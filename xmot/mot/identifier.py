@@ -98,7 +98,8 @@ def identify(dset, imgOutDir, blobsOutFile, modelType="DNN", model=None, train_s
         
         # normalize speeds (useful for plotting later)
         max_speed = np.max(speed)
-        speed     = speed/max_speed
+        if max_speed != 0:
+            speed = speed / max_speed # Otherwise, all values are already 0.
         th_speed=0.2
         th_dist=2
         it =2

@@ -20,11 +20,8 @@ BACK_TRACE_LIMIT = 3    # Time frames before the start of a trajectory allowed t
 
 def distance(a: List[float], b: List[float]) -> float:
     """L2 norm of vectors of any dimension."""
-    if a is None:
-        Logger.warning("Trying to compute distance for a null vector-a.")
-        return float("inf")
-    elif b is None:
-        Logger.warning("Trying to compute distance for a null vector-b.")
+    if a is None or b is None:
+        Logger.debug("Trying to compute distance for null vectors.")
         return float("inf")
     if len(a) != len(b):
         Logger.error("Cannot calculate distance between two vectors of different dimensions: " + \
@@ -107,9 +104,7 @@ def collect_images(dir: str, prefix: str, ext: str, start: int, end: int) \
     if end != sys.maxsize:
         for i in range(end + 1, numbers[-1] + 1): # end is inclusive
             files.remove("{:s}{:d}.{:s}".format(prefix, i, ext))
-    images = []
-    for f in files:
-        images.append(Image.open(path.join(dir, f)))
+    images = [Image.open(path.join(dir, f)).copy() for f in files] # Use copy() to retain the image but close the file descriptor.
     return images
 
 def paste_images(left_imgs: List[Image.Image], right_imgs: List[Image.Image], dest, write_img, ids=None) \
@@ -118,7 +113,7 @@ def paste_images(left_imgs: List[Image.Image], right_imgs: List[Image.Image], de
     images = []
     # original image and reproduced image should have same height.
     if len(left_imgs) != len(right_imgs):
-        Logger.error("There aren't same number of original and reproduced iamges. Please check!")
+        Logger.warning("There aren't same number of detection and reproduced iamges! Reproduced video will only be generated for the frames having detection images.")
     
     new_res = (left_imgs[0].width + right_imgs[0].width, left_imgs[0].height)
     for i in range(len(left_imgs)):
