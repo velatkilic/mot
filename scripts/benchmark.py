@@ -140,7 +140,7 @@ def batch(src_dir, model, output, area_threshold, tolerance, debug_output):
                     100 * float(shape_accuracy["shell_circle"]) / -1))
 
         if stats["agglomerate"] > 0:
-            f.write("Shape accuracy {:s} = {:.3f}%\n".format("agglomerate",
+            f.write("Shape accuracy {:s} = {:.3f}%\n".format("agglomerate as non-circle",
                     100 * float(shape_accuracy["agglomerate_non-circle"]) / stats["agglomerate"]))
         else:
             f.write("Shape accuracy {:s} = {:s}%\n".format("agglomerate", "N/A"))

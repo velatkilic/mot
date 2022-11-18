@@ -196,11 +196,11 @@ class Digraph:
 
     def add_edge(self, start, end):
         if start not in self.__in_nodes or start not in self.__out_nodes:
-            Logger.warning("Trying to add an edge for a non-existing node {:s}".format(start.to_str()))
+            Logger.debug("Trying to add an edge for a non-existing node {:s}".format(start.to_str()))
             self.add_node(start)
         
         if end not in self.__in_nodes or end not in self.__out_nodes:
-            Logger.warning("Trying to add an edge for a non-existing node {:s}".format(start.to_str()))
+            Logger.debug("Trying to add an edge for a non-existing node {:s}".format(start.to_str()))
             self.add_node(end)
 
         self.__in_nodes[end].append(start)
@@ -259,7 +259,7 @@ class Digraph:
         pass
 
 
-    def draw(self, dest, write_img=True, draw_id=False, draw_shape=True) -> List[Image.Image]:
+    def draw(self, dest, write_img=True, draw_id=False, draw_shape=True, start_frame=-1, end_frame=-1) -> List[Image.Image]:
         """
             Draw trajectories and nodes in pictures. One picture for each time frame.
 
@@ -268,6 +268,8 @@ class Digraph:
                 write_img : Boolean Flag controlling whether to write images.
                 draw_id   : Boolean Whether draw particle id on top right corner of bbox.
                 draw_shape: Boolean Whether write shape of particle on top right corner.
+                start_frame: Index of first frame from which to draw. If -1, use the smallest frame index having a particle.
+                end_frame : Index of last frame to end drawing. If -1, use the largest frame index having a particle.
             Returns:
                 A list of Image objects representing reproduced frames from the digraph
                 representation.
@@ -278,7 +280,11 @@ class Digraph:
 
         # Group entities according to associated time_frame and then draw 
         # frame by frame.
-        start_frame, end_frame = self.get_time_frames()
+        start_frame_digraph, end_frame_digraph = self.get_time_frames()
+        if start_frame == -1:
+            start_frame = start_frame_digraph
+        if end_frame == -1:
+            end_frame == end_frame_digraph
         dict_ptcls = {} # Dict{int: List[Particle]}
         dict_trajs = {}
         dict_nodes = {}

@@ -4,6 +4,7 @@ import xml.etree.ElementTree as ET
 
 from xmot.logger import Logger
 from xmot.digraph.particle import Particle
+from xmot.digraph import commons
 
 """
 Parser of xmot.digraph.particle in different formats.
@@ -47,14 +48,30 @@ def load_blobs_from_text(file_name: str) -> List[Particle]:
         for line in f:
             terms = line.replace(" ", "").split(",")
             terms = [int(term) for term in terms]
-            if len(terms) < 8:
+            if len(terms) != 8:
                 Logger.warning("Invalid blob info: {:s}".format(line))
             else:
-                position = [terms[0], terms[1]]   # x1, y1
-                bbox = [terms[4], terms[5]]       # width, height
-                idx = terms[6]
-                time_frame = terms[7]
-                particles.append(Particle(position, bbox=bbox, id=idx, time_frame=time_frame))
+                x1, y1, x2, y2, width, height, id, time_frame = terms
+                # Sanity check. During Kalman filter, the coordinates of the bbox might be out of
+                # the image. We need to check them before adding this particle into digraph.
+                if (x1 < 0 and x2 < 0) or \
+                        (x1 > commons.PIC_DIMENSION[0] and x2 > commons.PIC_DIMENSION[0]) or \
+                        (y1 < 0 and y2 < 0) or \
+                        (y1 > commons.PIC_DIMENSION[1] and y2 > commons.PIC_DIMENSION[1]):
+                    Logger.debug("Invalid particle. Coordinates outside the image. {:d} {:d} {:d} {:d}".format(x1, y1, x2, y2))
+                    continue  # Skip this particle. Invalid.
+
+                x1_new = x1 if x1 >= 0 else 0
+                y1_new = y1 if y1 >= 0 else 0
+                x2_new = x2 if x2 < commons.PIC_DIMENSION[0] else commons.PIC_DIMENSION[0]
+                y2_new = y2 if y2 < commons.PIC_DIMENSION[1] else commons.PIC_DIMENSION[1]
+
+                width_new = x2_new - x1_new
+                height_new = y2_new - y1_new
+                if width <=0 or height <=0:
+                    Logger.debug("Invalid particle. Non-positive width or height. {:d} {:d} {:d} {:d}".format(x1, y1, x2, y2))
+                    continue
+                particles.append(Particle([x1_new, y1_new], bbox=[width_new, height_new], id=id, time_frame=time_frame))
     return particles
 
 def parse_pascal_xml(file: str):
