@@ -50,14 +50,15 @@ def batch(src_dir, model, output, area_threshold, tolerance, debug_output):
     labelled_data = {}
     total_num_ptcls = 0
     for xml in xmls:
-        ps, img_path = parse_pascal_xml(xml)
+        ps, img_path = parse_pascal_xml(xml) # Labelled particle from this single file.
         labelled_data[img_path] = []
         img = cv.imread(img_path, cv.IMREAD_GRAYSCALE)
+        ps[:] = [p for p in ps if p.get_area() > area_threshold]
+        total_num_ptcls += len(ps)
         for p in ps:
-            if p.get_area() < area_threshold:
-                ps.remove(p)
-                continue
-            total_num_ptcls += 1
+            #if p.get_area() < area_threshold:
+            #    ps.remove(p)
+            #    continue
             labelled_data[img_path].append(p)
             stats[p.get_label()] += 1
             shape = detect_shape(p, img)
@@ -65,7 +66,7 @@ def batch(src_dir, model, output, area_threshold, tolerance, debug_output):
                 shape_accuracy["{:s}_{:s}".format(p.get_type(), p.get_shape())] += 1
         
         bboxes, mask = model.predict(img)
-        Logger.detail("Number of detected particles: {:d}".format(len(bboxes)))
+        Logger.detail("Number of detected particles in {:s}: {:d}".format(Path(img_path).name, len(bboxes)))
         detected_ptcls = []
         for bbox in bboxes:
             bbox = list(map(round, bbox))
@@ -79,14 +80,14 @@ def batch(src_dir, model, output, area_threshold, tolerance, debug_output):
         img_debug = cv.cvtColor(img.copy(), cv.COLOR_GRAY2BGR)
         for p1 in ps:
             found = False
-            for p2 in detected_ptcls:
+            for p2 in detected_ptcls[:]: # Create a copy. Otherwise, it creates the classic editing-while-iterating bug.
                 if is_equivalent(p1.get_bbox_torch(), p2.get_bbox_torch(), tolerance):
-                    detection_accuracy["true_positive"] += 1
+                    detection_accuracy["true_positive"] += 1 # Labelled and detected.
                     detected_ptcls.remove(p2)
                     found = True
                     break
             if not found:
-                detection_accuracy["false_negative"] += 1
+                detection_accuracy["false_negative"] += 1 # Labelled, but not not detected
             
             # Draw bboxes out for debug purposes.
             if not found:
@@ -94,12 +95,12 @@ def batch(src_dir, model, output, area_threshold, tolerance, debug_output):
                 cv.rectangle(img_debug, (b[0], b[1]), (b[2], b[3]), color=(0, 0, 255), thickness = 1) # Red
             else:
                 b = p2.get_bbox_torch()
-                cv.rectangle(img_debug, (b[0], b[1]), (b[2], b[3]), color=(0, 255, 0), thickness = 1)
+                cv.rectangle(img_debug, (b[0], b[1]), (b[2], b[3]), color=(0, 255, 0), thickness = 1) # Green.
 
-        detection_accuracy["false_positive"] += len(detected_ptcls)
+        detection_accuracy["false_positive"] += len(detected_ptcls) # Not labelled, but detected.
         for p in detected_ptcls:
             b = p.get_bbox_torch()
-            cv.rectangle(img_debug, (b[0], b[1]), (b[2], b[3]), color=(255, 0, 0), thickness = 1)
+            cv.rectangle(img_debug, (b[0], b[1]), (b[2], b[3]), color=(255, 0, 0), thickness = 1) # Blue
         if debug_output != "":
             debug_img_path = Path(debug_output).joinpath(Path(img_path).name)
             cv.imwrite(str(debug_img_path), img_debug)

@@ -94,6 +94,9 @@ class Particle:
     def get_shape(self):
         return self.shape
     
+    def set_type(self, type):
+        self.type = type
+
     def get_type(self):
         return self.type
 
@@ -114,6 +117,7 @@ class Particle:
     def __str__(self) -> str:
         string = "Particle_id : {:4d}; Time_frame: {:4d}; ".format(self.id, self.time_frame) + \
                  "x, y: {:5.1f}, {:5.1f}; ".format(self.position[0], self.position[1]) + \
+                 "bbox: {:5.1f}, {:5.1f}; ".format(self.bbox[0], self.bbox[1]) + \
                  "Area: {:6.2f}; ".format(self.get_area()) + \
                  "Shape: {:12s}; ".format(self.shape) + \
                  "Has_bubble: {:5s}".format(str(self.bubble != None))
