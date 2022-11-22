@@ -10,7 +10,7 @@ import glob
 
 class Beads:
     def __init__(self, side=256, beadradMax=10, beadradMin=3, numbeadsMax=20, numbeadsMin=10, sigma=1):
-        self.side = side
+        self.side = side # resolution. I.e. x, y dimension of the image.
         self.beadradMax = beadradMax
         self.beadradMin = beadradMin
         self.numbeadsMax = numbeadsMax
@@ -18,10 +18,14 @@ class Beads:
         self.sigma = sigma
 
     def gen_sample(self):
+        # Exclude beadradMax, numbeadsMax
         numbeads = np.random.randint(self.numbeadsMin, self.numbeadsMax)
         beadrad = (self.beadradMax - self.beadradMin) * np.random.rand(numbeads, 1) + self.beadradMin
 
-        x, y = np.meshgrid(np.linspace(0, self.side, self.side), np.linspace(0, self.side, self.side))
+        # Make sure coordinates of grid points are integers. Also to keep consistent with the
+        # "mask" and "cenx", "ceny" variables by excluding the end point.
+        x, y = np.meshgrid(np.linspace(0, self.side, num = self.side, endpoint=False),
+                           np.linspace(0, self.side, num = self.side, endpoint=False))
 
         mask = np.zeros((self.side, self.side), dtype=bool)
         cenx = np.random.randint(0, self.side, size=(numbeads, 1))
@@ -34,7 +38,7 @@ class Beads:
             seg.append(dmmy)
             mask = np.logical_or(mask, dmmy)
         mask = np.logical_not(mask)
-        img = 255 * mask.astype(np.uint8)
+        img = 255 * mask.astype(np.uint8) # Make the mask a binary image.
         img = gaussian_filter(img, self.sigma)
         img = img.reshape((self.side, self.side, 1))
         img = img.repeat(3, axis=2)
@@ -46,7 +50,6 @@ class Beads:
         bbox = np.concatenate((x1, y1, x2, y2), axis=1)
 
         return img, seg, bbox
-
 
 def numpy_to_maskrcnn_target(bbox, labels, seg, idx, area, iscrowd=None):
     target = {'boxes': torch.tensor(bbox, dtype=torch.float32)}
@@ -83,7 +86,7 @@ def write_target_to_file(seg, bbox, filename, idx):
 
 def read_target_from_file(filename, idx):
     fname = os.path.join(filename, "syn_bead_" + str(idx) + ".mat")
-    data = sio.loadmat(fname)
+    data = sio.loadmat(fname) # A dict with keys "seg" and "bbox". See write_target_to_file().
     return data["seg"], data["bbox"]
 
 
