@@ -20,6 +20,7 @@ class Beads:
     def gen_sample(self):
         # Exclude beadradMax, numbeadsMax
         numbeads = np.random.randint(self.numbeadsMin, self.numbeadsMax)
+        print(numbeads)
         beadrad = (self.beadradMax - self.beadradMin) * np.random.rand(numbeads, 1) + self.beadradMin
 
         # Make sure coordinates of grid points are integers. Also to keep consistent with the
@@ -27,7 +28,7 @@ class Beads:
         x, y = np.meshgrid(np.linspace(0, self.side, num = self.side, endpoint=False),
                            np.linspace(0, self.side, num = self.side, endpoint=False))
 
-        mask = np.zeros((self.side, self.side), dtype=bool)
+        mask = np.zeros((self.side, self.side), dtype=bool) # default is False.
         cenx = np.random.randint(0, self.side, size=(numbeads, 1))
         ceny = np.random.randint(0, self.side, size=(numbeads, 1))
 
@@ -36,10 +37,10 @@ class Beads:
         for i in range(numbeads):
             dmmy = (x - cenx[i]) ** 2 + (y - ceny[i]) ** 2 <= (beadrad[i]) ** 2
             seg.append(dmmy)
-            mask = np.logical_or(mask, dmmy)
-        mask = np.logical_not(mask)
-        img = 255 * mask.astype(np.uint8) # Make the mask a binary image.
-        img = gaussian_filter(img, self.sigma)
+            mask = np.logical_or(mask, dmmy) # Find the cumulative mask.
+        mask = np.logical_not(mask) # Reverse the bit. Background is white and is True. Particles are black and are False.
+        img = 255 * mask.astype(np.uint8) # Make the mask a binary image. True -> 255, False -> 0.
+        img = gaussian_filter(img, self.sigma) # Blur the particles.
         img = img.reshape((self.side, self.side, 1))
         img = img.repeat(3, axis=2)
 
@@ -59,7 +60,7 @@ def numpy_to_maskrcnn_target(bbox, labels, seg, idx, area, iscrowd=None):
         target['labels'] = torch.tensor(labels, dtype=torch.int64)
     target['masks'] = torch.tensor(seg, dtype=torch.uint8)
     target['image_id'] = torch.tensor([idx])
-    target['area'] = torch.tensor([area], dtype=torch.float32)
+    target['area'] = torch.tensor(np.array([area]), dtype=torch.float32)
     if iscrowd is None:
         target['iscrowd'] = torch.zeros((len(bbox),), dtype=torch.int64)
     else:
