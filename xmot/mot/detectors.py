@@ -77,7 +77,7 @@ class DNN:
             self.lr_scheduler.step()
 
     def train(self, train_dataloader, epoch=20, print_interval=1000):
-        self.model.train()
+        self.model.train() # Set on training mode, not actually updating the parameter.
         for i in range(epoch):
             self._train_one_epoch(train_dataloader, print_interval)
         self.model.eval()
@@ -146,7 +146,7 @@ class Canny:
 
 
 class GMM:
-    def __init__(self, fname, crop, history=100, varThreshold=40, it_closing=1, minArea=20):
+    def __init__(self, fname, crop, history=100, varThreshold=40, it_closing=1, minArea=5):
         """
 
         Attributes:
@@ -166,9 +166,15 @@ class GMM:
         Logger.detail("Training GMM ...")
         self.__train()
 
-    def predict(self, img):
+    def predict(self, img, learningRate=-1):
+        """
+        learningRate : int  Controls how background image is updated when gmm.apply() is called.
+                            -1: automatic update background image;
+                            0: don't update background image using the current image
+                            1: completely reinitialize the background image based on the current image.
+        """
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        mask = self.gmm.apply(gray)
+        mask = self.gmm.apply(gray, learningRate=learningRate)
         # Morphological transformation: closing
         kernel = np.ones((8, 8), dtype=np.uint8)
         closing = cv.morphologyEx(mask, cv.MORPH_CLOSE, kernel, iterations=self.it_closing)

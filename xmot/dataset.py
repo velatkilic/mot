@@ -50,3 +50,9 @@ class Dataset:
         else:
             return 0
 
+    # For compatibility with GMM constructor.
+    def get_video_name(self):
+        return self.video_name
+    
+    def get_crop(self):
+        return self.crop

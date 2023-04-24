@@ -34,6 +34,7 @@ def batch(src_dir, model, output, area_threshold, tolerance, debug_output):
     total number of particles (i.e. labels), percentage of each label.
     """
     xmls = glob.glob("{:s}/*.xml".format(src_dir))
+    Logger.basic("Number of validation images found: {:d}".format(len(xmls)))
     model = DNN(model, device="cuda:0")
     stats = {"particle_no-bubble_circle" : 0, 
              "particle_no-bubble_non-circle" : 0,
@@ -105,7 +106,6 @@ def batch(src_dir, model, output, area_threshold, tolerance, debug_output):
             debug_img_path = Path(debug_output).joinpath(Path(img_path).name)
             cv.imwrite(str(debug_img_path), img_debug)
 
-
     num_particle = stats["particle_bubble_circle"] + stats["particle_bubble_non-circle"] + \
                    stats["particle_no-bubble_circle"] + stats["particle_no-bubble_non-circle"]
     num_particle_circle = stats["particle_bubble_circle"] + stats["particle_no-bubble_circle"]
@@ -123,8 +123,11 @@ def batch(src_dir, model, output, area_threshold, tolerance, debug_output):
         f.write("\n")
         f.write("Shape accuracy {:s} = {:.3f}%\n".format("particle_circle",
                 100 * float(shape_accuracy["particle_circle"]) / num_particle_circle))
-        f.write("Shape accuracy {:s} = {:.3f}%\n".format("particle_non-circle",
-                100 * float(shape_accuracy["particle_non-circle"]) / num_particle_non_circle))
+        if num_particle_non_circle > 0:
+            f.write("Shape accuracy {:s} = {:.3f}%\n".format("particle_non-circle",
+                    100 * float(shape_accuracy["particle_non-circle"]) / num_particle_non_circle))
+        else:
+            f.write("Shape accuracy {:s} : No particle.\n".format("particle_non-circle"))
         
         if stats["shell_circle"] > 0:
             f.write("Shape accuracy {:s} = {:.3f}%\n".format("shell_circle",
@@ -163,7 +166,6 @@ def batch(src_dir, model, output, area_threshold, tolerance, debug_output):
 #@click.option("--area-threshold", type=int, default=10)
 #@click.option("-t", "--tolerance", type=int, default=5, help="Tolerance in pixel when checking position equivalance. Inclusive.")
 #def single_image(img, xml, model, output, ):
-
 
 def is_equivalent(bbox1, bbox2, tolerance):
     diff = list(map(lambda x, y: abs(x-y), bbox1, bbox2))

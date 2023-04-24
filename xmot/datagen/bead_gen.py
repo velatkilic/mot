@@ -20,7 +20,7 @@ class Beads:
     def gen_sample(self):
         # Exclude beadradMax, numbeadsMax
         numbeads = np.random.randint(self.numbeadsMin, self.numbeadsMax)
-        print(numbeads)
+        #print(numbeads)
         beadrad = (self.beadradMax - self.beadradMin) * np.random.rand(numbeads, 1) + self.beadradMin
 
         # Make sure coordinates of grid points are integers. Also to keep consistent with the

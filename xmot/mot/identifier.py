@@ -1,7 +1,7 @@
 import cv2 as cv
 from xmot.mot.utils import drawBox, drawBlobs, writeBlobs, mergeBoxes
 from xmot.mot.kalman import MOT
-from xmot.mot.detectors import DNN
+from xmot.mot.detectors import DNN, GMM
 from xmot.datagen.bead_gen import bead_data_to_file, BeadDatasetFile, collate_fn
 from xmot.datagen.style_data_gen_mask import StyleDatasetGen
 import os
@@ -21,37 +21,39 @@ def identify(dset, imgOutDir, blobsOutFile, modelType="DNN", model=None, train_s
         model         : String  Path to pre-trained model.
         device        : String  Device to be used for training and detecting. "cuda:0" or "cpu".
     """
-    #
-    if train_set is None and model is None:
-        # regular bead data
-        filename = os.path.join(os.getcwd(), "train")
-        try:
-            os.mkdir(filename)
-        except:
-            Logger.warning("Folder of regular beads already exists! Overwriting existing data.")
+    if modelType == "DNN":
+        if train_set is None and model is None:
+            # regular bead data
+            filename = os.path.join(os.getcwd(), "train")
+            try:
+                os.mkdir(filename)
+            except:
+                Logger.warning("Folder of regular beads already exists! Overwriting existing data.")
 
-        bead_data_to_file(filename)
-        train_set = [filename]
+            bead_data_to_file(filename)
+            train_set = [filename]
 
-        # style bead data
-        filename = os.path.join(os.getcwd(), "train_style")
-        train_set.append(filename)
-        sdset = StyleDatasetGen(dset=dset, len=100)
-        sdset.gen_dataset()
+            # style bead data
+            filename = os.path.join(os.getcwd(), "train_style")
+            train_set.append(filename)
+            sdset = StyleDatasetGen(dset=dset, len=100)
+            sdset.gen_dataset()
 
-    # Object detection
-    if model is None:
-        model = DNN(device=device)
-        for d in train_set:
-            print("Train set: " + d)
-            d = BeadDatasetFile(d)
-            train_dataloader = DataLoader(d, batch_size=2, shuffle=True, collate_fn=collate_fn, num_workers=num_workers)
-            model.train(train_dataloader)
+        # Object detection
+        if model is None:
+            model = DNN(device=device)
+            for d in train_set:
+                print("Train set: " + d)
+                d = BeadDatasetFile(d)
+                train_dataloader = DataLoader(d, batch_size=2, shuffle=True, collate_fn=collate_fn, num_workers=num_workers)
+                model.train(train_dataloader)
 
-        # save model
-        model.save_model()
-    else:
-        model = DNN(model, device=device)
+            # save model
+            model.save_model()
+        else:
+            model = DNN(model, device=device)
+    elif modelType == "GMM":
+        model = GMM(dset.get_video_name(), dset.get_crop())
 
     # Tracking
     # Make directory
@@ -65,9 +67,12 @@ def identify(dset, imgOutDir, blobsOutFile, modelType="DNN", model=None, train_s
     
     for i in range(dset.length()-1):
         img = dset.get_img(i)
-        bbox, mask = model.predict(img)
+        bbox, mask = model.predict(img) # Note: mask would be None for GMM model. TODO
         
         if len(bbox) == 0: # No particles have been detected in this frame
+            # Still write images out.
+            cv.imwrite("{:s}/{:s}_{:d}.jpg".format(imgOutDir, modelType, i), img)
+            cv.imwrite("{:s}/{:s}_{:d}.jpg".format(kalman_dir, modelType, i), img)
             continue
 
         # optical flow
@@ -113,9 +118,9 @@ def identify(dset, imgOutDir, blobsOutFile, modelType="DNN", model=None, train_s
         cv.imwrite("{:s}/{:s}_{:d}.jpg".format(imgOutDir, modelType, i), cont)
         
         # Kalman tracking
-        if i == 0:
+        if "mot" not in locals(): # If have created a MOT object.
             mot = MOT(bbox, mask)
-        else:
+        else: # Use the existing MOT object.
             mot.step(bbox, mask)
 
         img_kalman = drawBlobs(img.copy(), mot.blobs)
