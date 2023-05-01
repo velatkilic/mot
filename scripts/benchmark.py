@@ -9,21 +9,22 @@ from xmot.analyzer.shapeDetector import detect_shape
 from xmot.digraph.particle import Particle
 from xmot.mot.detectors import DNN
 from xmot.logger import Logger
+from xmot.config import AREA_THRESHOLD
 
 @click.group()
 def benchmark():
     pass
 
 @benchmark.command()
-@click.argument("src_dir")
+@click.argument("data_dir")
 @click.argument("model")
 @click.argument("output")
 @click.option("--debug-output", type=str, default="", help="Folder to write debug images.")
-@click.option("--area-threshold", type=int, default=10)
+@click.option("--area-threshold", type=int, default=AREA_THRESHOLD)
 @click.option("-t", "--tolerance", type=int, default=5, help="Tolerance in pixel when checking position equivalance. Inclusive.")
-def batch(src_dir, model, output, area_threshold, tolerance, debug_output):
+def batch(data_dir, model, output, area_threshold, tolerance, debug_output):
     """
-    Collect all labelled data from .xml files in SRC_DIR and detect particles in corresponding
+    Collect all labelled data from .xml files in DATA_DIR and detect particles in corresponding
     images with MODEL. Then write bencharmk results to the OUTPUT file.
 
     \b
@@ -33,7 +34,7 @@ def batch(src_dir, model, output, area_threshold, tolerance, debug_output):
     2. In OUTPUT file, we will record statistics about the labelled data: total number of images,
     total number of particles (i.e. labels), percentage of each label.
     """
-    xmls = glob.glob("{:s}/*.xml".format(src_dir))
+    xmls = glob.glob("{:s}/*.xml".format(data_dir))
     Logger.basic("Number of validation images found: {:d}".format(len(xmls)))
     model = DNN(model, device="cuda:0")
     stats = {"particle_no-bubble_circle" : 0, 
@@ -51,7 +52,8 @@ def batch(src_dir, model, output, area_threshold, tolerance, debug_output):
     labelled_data = {}
     total_num_ptcls = 0
     for xml in xmls:
-        ps, img_path = parse_pascal_xml(xml) # Labelled particle from this single file.
+        ps, file_name = parse_pascal_xml(xml) # Labelled particle from this single file.
+        img_path = str(Path(data_dir).joinpath(file_name))
         labelled_data[img_path] = []
         img = cv.imread(img_path, cv.IMREAD_GRAYSCALE)
         ps[:] = [p for p in ps if p.get_area() > area_threshold]

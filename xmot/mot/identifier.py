@@ -52,8 +52,9 @@ def identify(dset, imgOutDir, blobsOutFile, modelType="DNN", model=None, train_s
             model.save_model()
         else:
             model = DNN(model, device=device)
-    elif modelType == "GMM":
-        model = GMM(dset.get_video_name(), dset.get_crop())
+    # We remodelled the GMM model entirely.
+    #elif modelType == "GMM":
+    #    model = GMM(dset.get_video_name(), dset.get_crop())
 
     # Tracking
     # Make directory

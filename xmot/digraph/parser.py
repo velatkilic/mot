@@ -1,5 +1,6 @@
 from typing import List, Tuple
 import pandas as pd
+import re
 import xml.etree.ElementTree as ET
 
 from xmot.logger import Logger
@@ -74,9 +75,9 @@ def load_blobs_from_text(file_name: str) -> List[Particle]:
                 particles.append(Particle([x1_new, y1_new], bbox=[width_new, height_new], id=id, time_frame=time_frame))
     return particles
 
-def parse_pascal_xml(file: str):
+def parse_pascal_xml(file_path: str) -> Tuple[List[Particle], str]:
     """
-    Parse labelled images in PASCAL VOC format.
+    Parse one labelled data in the PASCAL VOC format.
 
     Images are labelled by LabelImg with tags:
         particle_no-bubble_circle
@@ -89,13 +90,13 @@ def parse_pascal_xml(file: str):
 
     Return:
         List[Particle]: List of particles parsed from FILE.
-        str: path to the image corresponding to FILE.
+        str: the file name of the image.
     """
-    doc = ET.parse(file)
-    img_path = doc.find("path").text
+    doc = ET.parse(file_path)
+    file_name = doc.find("filename").text # Only the file name of the corresponding image.
     particles = []
     for obj in doc.findall("object"): # Only find direct child of doc.
-        properties = obj.find("name").text.split("_")
+        properties = obj.find("name").text.split("_") # label
         p_type=properties[0]
         p_shape=""
         p_bubble=None
@@ -115,14 +116,20 @@ def parse_pascal_xml(file: str):
         xmax = int(p_bbox.find("xmax").text)
         ymax = int(p_bbox.find("ymax").text)
         p = Particle(position=[xmin, ymin], bbox=[xmax - xmin, ymax - ymin],
-                     type=p_type, shape=p_shape, bubble=p_bubble, path_img = img_path)
+                     type=p_type, shape=p_shape, bubble=p_bubble)
         particles.append(p)
-    particles.sort(key=lambda p: p.get_position()[0]) # sort in ascending order of x.
+    
+    # sort in ascending order of y (row-index of numpy), and then x (column-index of numpy).
+    particles.sort(key=lambda p: p.get_top_left_position_reversed())
+    obj = re.match(".*_([0-9]+)_([a-zA-Z]*)([0-9]+)\.([a-zA-Z]+)", file_name)
+    image_id = int(obj.group(3))
+    video_id = int(obj.group(1))
     id = 0
     for p in particles:
         p.set_id(id)
+        p.set_time_frame(image_id)
         id += 1
-    return particles, img_path
+    return particles, file_name
         
 
     

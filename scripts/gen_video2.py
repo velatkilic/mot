@@ -1,11 +1,8 @@
-import PIL
 import cv2 as cv
 import os
 import re
-from typing import List, Tuple
 import sys
 import click
-
 
 IMAGE_FORMAT=["jpg", "png", "tif", "tiff", "jpeg"]
 
@@ -58,10 +55,6 @@ def generate_video(input_dir, output, ext, start_id, end_id, fps, res, format):
         fourcc = cv.VideoWriter_fourcc(*'mp4v') # XVID: .avi; mp4v: .mp4
     else:
         fourcc = cv.VideoWriter_fourcc(*'XVID') # XVID: .avi; mp4v: .mp4
-    
-    print(fps)
-    print(res)
-    print(output)
 
     video = cv.VideoWriter(output, fourcc, fps, res) # res is (width, height)
     for i in images:

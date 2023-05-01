@@ -11,22 +11,17 @@ Possibly edited by Velat Kilic
 """
 
 from __future__ import print_function
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-
 import torchvision.models as models
-
 import copy
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
 ######################################################################
 # Loss Functions
-
 
 class ContentLoss(nn.Module):
 
@@ -73,16 +68,14 @@ class StyleLoss(nn.Module):
 # Importing the Model
 
 # use only features which has the CNNs (as opposed to the det heads)
-cnn = models.vgg19(pretrained=True).features.to(device).eval()
+#cnn = models.vgg19(pretrained=True).features.to(device).eval()
 
 # Additionally, VGG networks are trained on images with each channel
 # normalized by mean=[0.485, 0.456, 0.406] and std=[0.229, 0.224, 0.225].
 # We will use them to normalize the image before sending it into the network.
 #
-
 cnn_normalization_mean = torch.tensor([0.485, 0.456, 0.406]).to(device)
 cnn_normalization_std = torch.tensor([0.229, 0.224, 0.225]).to(device)
-
 
 # create a module to normalize input image so we can easily put it in a
 # nn.Sequential
@@ -186,7 +179,9 @@ def run_style_transfer(cnn, normalization_mean, normalization_std,
     """Run the style transfer."""
     print('Building the style transfer model..')
     model, style_losses, content_losses = get_style_model_and_losses(cnn,
-                                                                     normalization_mean, normalization_std, style_img,
+                                                                     normalization_mean,
+                                                                     normalization_std,
+                                                                     style_img,
                                                                      content_img)
     optimizer = get_input_optimizer(input_img)
 

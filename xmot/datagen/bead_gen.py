@@ -9,18 +9,19 @@ import glob
 
 
 class Beads:
-    def __init__(self, side=256, beadradMax=10, beadradMin=3, numbeadsMax=20, numbeadsMin=10, sigma=1):
+    def __init__(self, side=256, beadradMax=10, beadradMin=3, numbeadsMax=20, numbeadsMin=10,
+                 sigma=1, no_overlap=True):
         self.side = side # resolution. I.e. x, y dimension of the image.
         self.beadradMax = beadradMax
         self.beadradMin = beadradMin
         self.numbeadsMax = numbeadsMax
         self.numbeadsMin = numbeadsMin
         self.sigma = sigma
+        self.no_overlap = no_overlap
 
     def gen_sample(self):
         # Exclude beadradMax, numbeadsMax
         numbeads = np.random.randint(self.numbeadsMin, self.numbeadsMax)
-        #print(numbeads)
         beadrad = (self.beadradMax - self.beadradMin) * np.random.rand(numbeads, 1) + self.beadradMin
 
         # Make sure coordinates of grid points are integers. Also to keep consistent with the
@@ -34,10 +35,37 @@ class Beads:
 
         seg = []  # segmentation map
 
-        for i in range(numbeads):
-            dmmy = (x - cenx[i]) ** 2 + (y - ceny[i]) ** 2 <= (beadrad[i]) ** 2
-            seg.append(dmmy)
-            mask = np.logical_or(mask, dmmy) # Find the cumulative mask.
+        if self.no_overlap:
+            for i in range(numbeads):
+                # Regenerate until no overlap with previous particles
+                has_overlap = False
+                for j in range(0, i):
+                    if (cenx[i] - cenx[j]) ** 2 + (ceny[i] - ceny[j]) ** 2 <= (beadrad[i] + beadrad[j]) ** 2:
+                        has_overlap = True
+                        break
+                while(has_overlap):
+                    has_overlap = False
+                    tempx = np.random.randint(0, self.side)
+                    tempy = np.random.randint(0, self.side)
+                    temprad = (self.beadradMax - self.beadradMin) * np.random.rand() + self.beadradMin
+                    for j in range(0, i):
+                        if (tempx - cenx[j]) ** 2 + (tempy - ceny[j]) ** 2 <= (temprad + beadrad[j]) ** 2:
+                            has_overlap = True
+                            break
+                    if not has_overlap:
+                        cenx[i] = tempx
+                        ceny[i] = tempy
+                        beadrad[i] = temprad
+
+                dmmy = (x - cenx[i]) ** 2 + (y - ceny[i]) ** 2 <= (beadrad[i]) ** 2
+                seg.append(dmmy)
+                mask = np.logical_or(mask, dmmy) # Find the cumulative mask.
+        else:
+            # Allow overlapped beads.
+            for i in range(numbeads):
+                dmmy = (x - cenx[i]) ** 2 + (y - ceny[i]) ** 2 <= (beadrad[i]) ** 2
+                seg.append(dmmy)
+                mask = np.logical_or(mask, dmmy) # Find the cumulative mask.
         mask = np.logical_not(mask) # Reverse the bit. Background is white and is True. Particles are black and are False.
         img = 255 * mask.astype(np.uint8) # Make the mask a binary image. True -> 255, False -> 0.
         img = gaussian_filter(img, self.sigma) # Blur the particles.
@@ -70,8 +98,8 @@ def numpy_to_maskrcnn_target(bbox, labels, seg, idx, area, iscrowd=None):
 
 
 def bead_data_to_file(filename, N=10000, side=256, beadradMax=10, beadradMin=3, numbeadsMax=20, numbeadsMin=10,
-                      sigma=1):
-    bead_gen = Beads(side, beadradMax, beadradMin, numbeadsMax, numbeadsMin, sigma)
+                      sigma=1, no_overlap=False):
+    bead_gen = Beads(side, beadradMax, beadradMin, numbeadsMax, numbeadsMin, sigma, no_overlap=no_overlap)
 
     for i in range(N):
         img, seg, bbox = bead_gen.gen_sample()
