@@ -32,9 +32,10 @@ def get_contour_center(cnt) -> List[int]:
     center_y = int(moments["m01"] / moments['m00'])
     return [center_x, center_y]
 
-def load_images_from_dir(dir, start_id=0, end_id=sys.maxsize, ext=None, grayscale=True) -> Tuple[List[np.ndarray], List[str]]:
+def load_images_from_dir(dir, start_id=0, end_id=sys.maxsize, ext=None, grayscale=True) \
+    -> Tuple[List[np.ndarray], List[str]]:
     """
-    Load all images from DIR. 
+    Load all images from DIR, return the images and corresponding image file names in two lists.
 
     Filter the images by id if START_ID and END_ID are given. If EXT is None, use the
     extension of the first legit image file.
