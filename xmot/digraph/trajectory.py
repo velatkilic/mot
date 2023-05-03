@@ -202,6 +202,9 @@ class Trajectory:
             p1 = self.ptcls[0].get_position()
             p2 = self.ptcls[1].get_position() # Later in time
             delta_t = self.ptcls[1].get_time_frame() - self.ptcls[0].get_time_frame()
+            if delta_t == 0:
+                Logger.debug("Particles of the same trajectory have equal time frame! Cannot backtrace.")
+                return p1 # The first particle
             return_position = [0, 0]
             return_position[0] = p1[0] - (p2[0] - p1[0]) / delta_t * (self.ptcls[0].get_time_frame() - time)
             return_position[1] = p1[1] - (p2[1] - p1[1]) / delta_t * (self.ptcls[0].get_time_frame() - time)
@@ -215,6 +218,9 @@ class Trajectory:
             p1 = self.ptcls[-1].get_position()
             p2 = self.ptcls[-2].get_position() # Earlier in time
             delta_t = self.ptcls[-1].get_time_frame() - self.ptcls[-2].get_time_frame()
+            if delta_t == 0:
+                Logger.debug("Particles of the same trajectory have equal time frame! Cannot backtrace.")
+                return p1 # The last particle
             return_position = [0, 0]
             return_position[0] = p1[0] + (p1[0] - p2[0]) / delta_t * (time - self.ptcls[-1].get_time_frame())
             return_position[1] = p1[1] + (p1[1] - p2[1]) / delta_t * (time - self.ptcls[-1].get_time_frame())

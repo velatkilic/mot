@@ -145,7 +145,7 @@ def binary_threshold(img, threshold = 90, is_grayscale = False):
     return img_threshold
 
 def adaptive_threshold(img, method = cv.ADAPTIVE_THRESH_MEAN_C, blocksize = 15, offset = 0, 
-                        is_grayscale = False):
+                       is_grayscale = False):
     
     if not is_grayscale:
         img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
