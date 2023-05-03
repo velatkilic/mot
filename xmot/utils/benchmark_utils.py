@@ -124,8 +124,8 @@ def compare_bbox(gt_bbox: List[List[int]], pred_bbox: List[List[int]], threshold
                 # bounding box. It often happens when the particle is very small
                 # and the hand-labeled bbox contains too much a margin.
                 if iou(intersect(gt, pred), pred) > 0.8:
-                    seen_gt[j] = True
-                    seen_pred[i] = True
+                    seen_gt[i] = True
+                    seen_pred[j] = True
                     break
 
     return seen_gt, seen_pred
@@ -179,6 +179,8 @@ def save_prediction_cnt(file, predicted_cnt: Dict[int, List[np.ndarray]]):
     
     Each np.ndarray in the list has the shape: (n, 1, 2), corresponding to the shape of contours in
     OpenCV.
+
+    The output file should have extension ".npy", and it will be a binary file.
     """
     np.save(file, predicted_cnt) # The saved file is binary.
 

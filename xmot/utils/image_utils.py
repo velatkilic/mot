@@ -39,6 +39,8 @@ def load_images_from_dir(dir, start_id=0, end_id=sys.maxsize, ext=None, grayscal
 
     Filter the images by id if START_ID and END_ID are given. If EXT is None, use the
     extension of the first legit image file.
+
+    TODO: Refactor to use imageio.get_reader(). Don't reinvent wheel.
     """
     if ext == None:
         files = [os.path.join(dir, f) for f in os.listdir(dir)]
@@ -53,8 +55,12 @@ def load_images_from_dir(dir, start_id=0, end_id=sys.maxsize, ext=None, grayscal
     
     files = natsort.natsorted(files)
     #files.sort(key=lambda f: int(re.match(".*_([a-zA-Z]*)([0-9]+)\.([a-z]+)", f).group(2)))
-    
-    files = [f for f in files if start_id <= int(re.match(IMAGE_FILE_PATTERN, f).group(3)) <= end_id]
+    if re.match(IMAGE_FILE_PATTERN, files[0]) is not None:
+        files = [f for f in files if start_id <= int(re.match(IMAGE_FILE_PATTERN, f).group(3)) <= end_id]
+    else:
+        # The images might not contain a video id. Use a shorter regular expression.
+        files = [f for f in files if start_id <= int(re.match(".*_([a-zA-Z]*)([0-9]+)\.([a-zA-Z]+)", f).group(2)) <= end_id]
+
 
     if len(files) == 0:
         print(f"No valid image files found in {dir} with extension {ext}")

@@ -74,8 +74,8 @@ class StyleLoss(nn.Module):
 # normalized by mean=[0.485, 0.456, 0.406] and std=[0.229, 0.224, 0.225].
 # We will use them to normalize the image before sending it into the network.
 #
-cnn_normalization_mean = torch.tensor([0.485, 0.456, 0.406]).to(device)
-cnn_normalization_std = torch.tensor([0.229, 0.224, 0.225]).to(device)
+#cnn_normalization_mean = torch.tensor([0.485, 0.456, 0.406]).to(device)
+#cnn_normalization_std = torch.tensor([0.229, 0.224, 0.225]).to(device)
 
 # create a module to normalize input image so we can easily put it in a
 # nn.Sequential
@@ -85,8 +85,10 @@ class Normalization(nn.Module):
         # .view the mean and std to make them [C x 1 x 1] so that they can
         # directly work with image Tensor of shape [B x C x H x W].
         # B is batch size. C is number of channels. H is height and W is width.
-        self.mean = torch.tensor(mean).view(-1, 1, 1)
-        self.std = torch.tensor(std).view(-1, 1, 1)
+        #self.mean = torch.tensor(mean).view(-1, 1, 1)
+        #self.std = torch.tensor(std).view(-1, 1, 1)
+        self.mean = mean.clone().detach().view(-1, 1, 1)
+        self.std = std.clone().detach().view(-1, 1, 1)
 
     def forward(self, img):
         # normalize img
@@ -210,7 +212,7 @@ def run_style_transfer(cnn, normalization_mean, normalization_std,
             loss.backward()
 
             run[0] += 1
-            if run[0] % 50 == 0:
+            if run[0] % 25 == 0: # Print losses every 25 steps.
                 print("run {}:".format(run))
                 print('Style Loss : {:4f} Content Loss: {:4f}'.format(
                     style_score.item(), content_score.item()))

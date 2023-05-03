@@ -9,8 +9,13 @@ import glob
 
 
 class Beads:
-    def __init__(self, side=256, beadradMax=10, beadradMin=3, numbeadsMax=20, numbeadsMin=10,
+    def __init__(self, side=256, beadradMax=25, beadradMin=3, numbeadsMax=20, numbeadsMin=3,
                  sigma=1, no_overlap=True):
+        """
+        Attribute:
+            sigma:  int     Standard deviation of the gaussian filter. If negative, don't apply
+                            gaussian bluring.
+        """
         self.side = side # resolution. I.e. x, y dimension of the image.
         self.beadradMax = beadradMax
         self.beadradMin = beadradMin
@@ -20,6 +25,9 @@ class Beads:
         self.no_overlap = no_overlap
 
     def gen_sample(self):
+        """
+        Generate one image with random distributed shperical particles.
+        """
         # Exclude beadradMax, numbeadsMax
         numbeads = np.random.randint(self.numbeadsMin, self.numbeadsMax)
         beadrad = (self.beadradMax - self.beadradMin) * np.random.rand(numbeads, 1) + self.beadradMin
@@ -68,7 +76,8 @@ class Beads:
                 mask = np.logical_or(mask, dmmy) # Find the cumulative mask.
         mask = np.logical_not(mask) # Reverse the bit. Background is white and is True. Particles are black and are False.
         img = 255 * mask.astype(np.uint8) # Make the mask a binary image. True -> 255, False -> 0.
-        img = gaussian_filter(img, self.sigma) # Blur the particles.
+        if (self.sigma > 0):
+            img = gaussian_filter(img, self.sigma) # Blur the particles.
         img = img.reshape((self.side, self.side, 1))
         img = img.repeat(3, axis=2)
 
@@ -96,28 +105,23 @@ def numpy_to_maskrcnn_target(bbox, labels, seg, idx, area, iscrowd=None):
 
     return target
 
-
-def bead_data_to_file(filename, N=10000, side=256, beadradMax=10, beadradMin=3, numbeadsMax=20, numbeadsMin=10,
-                      sigma=1, no_overlap=False):
-    bead_gen = Beads(side, beadradMax, beadradMin, numbeadsMax, numbeadsMin, sigma, no_overlap=no_overlap)
-
+def bead_data_to_file(filename, bead_gen, N=10000):
+    # side=256, beadradMax=10, beadradMin=3, numbeadsMax=20, numbeadsMin=10, sigma=1, no_overlap=False):
+    #bead_gen = Beads(side, beadradMax, beadradMin, numbeadsMax, numbeadsMin, sigma, no_overlap=no_overlap)
     for i in range(N):
         img, seg, bbox = bead_gen.gen_sample()
         iname = os.path.join(filename, "syn_bead_" + str(i) + ".png")
         cv.imwrite(iname, img)
         write_target_to_file(seg, bbox, filename, i)
 
-
 def write_target_to_file(seg, bbox, filename, idx):
     fname = os.path.join(filename, "syn_bead_" + str(idx) + ".mat")
     sio.savemat(fname, {"seg": seg, "bbox": bbox})
-
 
 def read_target_from_file(filename, idx):
     fname = os.path.join(filename, "syn_bead_" + str(idx) + ".mat")
     data = sio.loadmat(fname) # A dict with keys "seg" and "bbox". See write_target_to_file().
     return data["seg"], data["bbox"]
-
 
 def collate_fn(batch):
     return tuple(zip(*batch))
@@ -149,7 +153,6 @@ class BeadDataset(torch.utils.data.Dataset):
         img = self.tsf(img)
 
         return img, target
-
 
 class BeadDatasetFile(torch.utils.data.Dataset):
     def __init__(self, filename, tsf=None):
