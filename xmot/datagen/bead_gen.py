@@ -9,7 +9,7 @@ import glob
 
 
 class Beads:
-    def __init__(self, side=256, beadradMax=25, beadradMin=3, numbeadsMax=20, numbeadsMin=3,
+    def __init__(self, side=256, beadradMax=25, beadradMin=3, numbeadsMax=20, numbeadsMin=2,
                  sigma=1, no_overlap=True):
         """
         Attribute:

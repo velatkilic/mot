@@ -17,7 +17,7 @@ from xmot.datagen.bead_gen import *
 from xmot.logger import Logger
 
 class StyleDatasetGen:
-    def __init__(self, bead_gen, style_imgs, outFolder=None, N=1000, gray=True, save_orig=False):
+    def __init__(self, bead_gen, style_imgs, model=None, outFolder=None, N=1000, gray=True, save_orig=False):
         """
         Arguments:
             bead_gen:   Beads  Generator of spherical particles.
@@ -54,7 +54,15 @@ class StyleDatasetGen:
         self.bead_gen = bead_gen
 
         # use only features which has the CNNs (as opposed to the det heads)
-        self.cnn = models.vgg19(weights='IMAGENET1K_V1').features.to(self.device).eval()
+        if model is not None:
+            # Add this option primarily for HPC environment, which network might not be available.
+            vgg19 = models.vgg19()
+            state_dict = torch.load(model)
+            vgg19.load_state_dict(state_dict)
+            self.cnn = vgg19.features.to(self.device).eval()
+        else:
+            # If model path not provided, try to download from PyTorch website or load from cache.
+            self.cnn = models.vgg19(weights='IMAGENET1K_V1').features.to(self.device).eval()
         self.cnn_normalization_mean = torch.tensor([0.485, 0.456, 0.406]).to(self.device)
         self.cnn_normalization_std = torch.tensor([0.229, 0.224, 0.225]).to(self.device)
 
