@@ -16,7 +16,7 @@ from pathlib import Path
 @click.option("--print-interval", default=200, type=int, help="Intervals to log values of loss functions.")
 @click.option("--num-workers", default=0, type=int, help="Number of processes to load training data." \
               "It can be larger than batch_size. Each batch is assigned one process.")
-def train_a_model(dir1, size1, model_output, dir2, size2, batch_size, epoch, print_interval):
+def train_a_model(dir1, size1, model_output, dir2, size2, batch_size, epoch, print_interval, num_workers):
     """
     A script specially used for training models used to benchmark the effect of style transfered data
     and pure background data.
