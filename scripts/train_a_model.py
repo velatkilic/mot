@@ -13,7 +13,8 @@ import click
 @click.option("--size2", default=-1, type=int, help="Size of data from the second training data folder.")
 @click.option("--batch-size", default=2, type=int, help="Mini-batch size.")
 @click.option("--epoch", default=20, type=int, help="Number of epoches of training.")
-def train_a_model(dir1, size1, model_output, dir2, size2, batch_size, epoch):
+@click.option("--print-interval", default=200, type=int, help="Intervals to log values of loss functions.")
+def train_a_model(dir1, size1, model_output, dir2, size2, batch_size, epoch, print_interval):
     """
     A script specially used for training models used to benchmark the effect of style transfered data
     and pure background data.
@@ -24,13 +25,16 @@ def train_a_model(dir1, size1, model_output, dir2, size2, batch_size, epoch):
     #print("Number of style training data:", len(dataloader)) # Print the number of iterations.
 
     model = DNN(device="cuda", model=None)
-    model.train(dataloader, epoch=epoch, print_interval=200)
+    print(f"Training using data from {dir1}")
+    model.train(dataloader, epoch=epoch, print_interval=print_interval)
 
     if size2 > 0 and dir2 is not None:
+        print() # A new line
+        print(f"Training using data from {dir2}")
         dataset2 = BeadDatasetFile(dir2, len=size2)
         dataloader2 = DataLoader(dataset2, batch_size=batch_size, shuffle=True, collate_fn=collate_fn,
                                  num_workers=0, drop_last=False)
-        model.train(dataloader2)
+        model.train(dataloader2, epoch=epoch, print_interval=print_interval)
 
     # The state_dict has the same size as directly saving the model. Just save the model.
     model.save_model(model_output)

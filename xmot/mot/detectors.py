@@ -13,9 +13,6 @@ from xmot.logger import Logger
 from xmot.config import AREA_THRESHOLD
 from xmot.mot.utils import drawBox, areaBbox
 from xmot.utils.image_utils import get_contour_center
-# from xmot.mot.utils import mergeBoxes
-# from xmot.datagen.bead_gen import BeadDataset
-# from xmot.datagen.style_data_gen_mask import StyleDataset
 
 import torch
 import torchvision
