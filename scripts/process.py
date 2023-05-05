@@ -111,5 +111,16 @@ def subtract_brightfield(output_dir, brightfield, prefix):
         img_subtracted = subtract_bf(img, img_bf)[0]
         cv.imwrite(os.path.join(output_dir, orig_image_names[i]), img_subtracted)
 
+@process.command()
+@click.argument("output_dir")
+def invert(output_dir):
+    """
+    Batch invert pictures. Assume all pictures are in grayscale.
+    """
+    global orig_images, orig_ext, orig_image_names
+    for i in range(len(orig_images)):
+        img_inverse = cv.bitwise_not(orig_images[i])
+        cv.imwrite(os.path.join(output_dir, orig_image_names[i]), img_inverse)
+
 if __name__ == "__main__":
     process()
