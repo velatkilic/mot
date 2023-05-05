@@ -8,7 +8,7 @@ from xmot.digraph.parser import parse_pascal_xml
 from xmot.digraph.particle import Particle
 from typing import List, Tuple, Dict
 
-def load_labels(data_dir) -> Dict[int, Dict[int, List[int]]]:
+def load_labels(data_dir) -> Tuple[Dict[int, Dict[int, List[int]]], Dict[int, Dict[int, np.ndarray]]]:
     """
     Return a dict of dict, the inner dict of which is {"<frame_id>" : List of bbox}, and the
     outer dict of which uses video id as the key.
@@ -17,19 +17,23 @@ def load_labels(data_dir) -> Dict[int, Dict[int, List[int]]]:
     and "images".
     """
     xmls = glob.glob("{:s}/Annotations/*.xml".format(data_dir))
-    ret = {} # Return value
+    labels = {}
+    images = {}
     for xml in xmls:
         particles, img_file_name = parse_pascal_xml(xml)
         obj = re.match(".*_([0-9]+)_([a-zA-Z]*)([0-9]+)\.([a-zA-Z]+)", img_file_name)
         video_id = int(obj.group(1))
         image_id = int(obj.group(3)) # frame_id
         bbox = [p.get_bbox_torch() for p in particles]
-        if video_id not in ret:
-            ret[video_id] = {image_id: bbox} # Add a new video to the dict.
+        img = cv.imread(f"{data_dir}/images/{img_file_name}")
+        if video_id not in labels:
+            labels[video_id] = {image_id: bbox} # Add a new video to the dict.
+            images[video_id] = {image_id: img}
         else:
-            ret[video_id][image_id] = bbox # Add a new image to an existing video.
+            labels[video_id][image_id] = bbox # Add a new image to an existing video.
+            images[video_id][image_id] = img
     
-    return ret
+    return labels, images
 
 def iou(bbox_1, bbox_2) -> float:
     """
@@ -77,30 +81,13 @@ def union(bbox_1, bbox_2) -> List[int]:
     x2 = max(bbox_1[2], bbox_2[2])
     y2 = max(bbox_1[3], bbox_2[3])
     return [x1, y1, x2, y2]
-
-def draw_bbox_with_id(shape, bbox: List[List[int]], padding=30, fontScale=0.75) -> np.ndarray:
-    """
-    Draw the list of bbox annotated with id on a white image. The image is padded to
-    accomodate all the ids in case bboxes are close to boundaries of the image.
-
-    Attributes:
-        fontScale:  float   Font size.
-    """
-    img = np.full(shape, 255, dtype=np.uint8)
-    # Add a padding to see the texts that are outside of the boundary.
-    img = cv.copyMakeBorder(img, padding, padding, padding, padding, cv.BORDER_CONSTANT, value=255)
-    # Coordinates (x, y) are (column-index, row-index)
-    img = cv.rectangle(img, (padding, padding), np.array((shape[1], shape[0])) + padding, color=0)
-    for i, bbox in enumerate(bbox):
-        img = cv.putText(img, str(i), np.array((bbox[0], bbox[1])) + padding, 
-                         cv.FONT_HERSHEY_SIMPLEX, fontScale, 0, 2, cv.LINE_AA)
-        img = cv.circle(img, np.array((bbox[0], bbox[1])) + padding, radius=2, color=0, thickness=-1)
-        img = cv.rectangle(img, np.array((bbox[0], bbox[1])) + padding,
-                                np.array((bbox[2], bbox[3])) + padding, color=0)
-    return img
         
 def compare_bbox(gt_bbox: List[List[int]], pred_bbox: List[List[int]], threshold = 0.5,
-                 allow_enclose = True):
+                 allow_enclose = False):
+    """
+    "allow_enclose" is set to False by default, since we might have a partial detection of a particle.
+    "allow_enclose" might artificially increase localization accuracy.
+    """
     seen_gt = np.zeros(len(gt_bbox), dtype=bool)
     seen_pred = np.zeros(len(pred_bbox), dtype=bool)
     for i, gt in enumerate(gt_bbox):
@@ -130,17 +117,19 @@ def compare_bbox(gt_bbox: List[List[int]], pred_bbox: List[List[int]], threshold
 
     return seen_gt, seen_pred
 
-def get_binary_classification(seen_gt: List[bool], seen_pred: List[bool]):
+def get_confusion_matrix(seen_gt: List[bool], seen_pred: List[bool]):
     """
     Collect the count of true_positive, false_positive and false_negative from comparison 
     results.
     """
     # np.sum(seen_gt) sould be equal to np.sum(seen_pred)
-    return {"true_positive": np.sum(seen_gt), \
-            "false_positive": len(seen_gt) - np.sum(seen_gt), \
-            "false_negative": len(seen_pred) - np.sum(seen_pred)}
+    # np.int64 is not serializable and cannot be saved directly into JSON.
+    dict_confusion =  {"true_positive": int(np.sum(seen_gt)), \
+                        "false_positive": int(len(seen_gt) - np.sum(seen_gt)), \
+                        "false_negative": int(len(seen_pred) - np.sum(seen_pred))}
+    return dict_confusion
 
-def merge_classification_result(dict1: Dict, dict2: Dict) -> Dict:
+def merge_confusion_matrix(dict1: Dict, dict2: Dict) -> Dict:
     """
     Merge two dicts of the results of binary classification by adding values of the same key.
     """
@@ -148,6 +137,19 @@ def merge_classification_result(dict1: Dict, dict2: Dict) -> Dict:
     for key in dict1:
         ret[key] = dict1[key] + dict2[key]
     return ret
+
+def calc_precision(dict_confusion):
+    """
+    How precision of the prediction results.
+    """
+    total_predict = dict_confusion["true_positive"] + dict_confusion["false_positive"]
+    correct_predict = dict_confusion["true_positive"]
+    return correct_predict / total_predict
+
+def calc_recall(dict_confusion):
+    total_ground_truth = dict_confusion["true_positive"] + dict_confusion["false_negative"]
+    correct_predict = dict_confusion["true_positive"]
+    return correct_predict / total_ground_truth
 
 def bbox_area(bbox: List[int]) -> int:
     return (bbox[2] - bbox[0] + 1) * (bbox[3] - bbox[1] + 1)
@@ -187,3 +189,71 @@ def save_prediction_cnt(file, predicted_cnt: Dict[int, List[np.ndarray]]):
 def load_prediction_cnt(file) -> Dict[int, List[np.ndarray]]:
     obj = np.load(file, allow_pickle=True)
     return obj[()]
+
+
+def draw_bbox_with_id(shape, bbox: List[List[int]], padding=30, fontScale=0.75) -> np.ndarray:
+    """
+    Draw the list of bbox annotated with id on a white image. The image is padded to
+    accomodate all the ids in case bboxes are close to boundaries of the image.
+
+    Attributes:
+        fontScale:  float   Font size.
+    """
+    img = np.full(shape, 255, dtype=np.uint8)
+    # Add a padding to see the texts that are outside of the boundary.
+    img = cv.copyMakeBorder(img, padding, padding, padding, padding, cv.BORDER_CONSTANT, value=255)
+    # Coordinates (x, y) are (column-index, row-index)
+    img = cv.rectangle(img, (padding, padding), np.array((shape[1], shape[0])) + padding, color=0)
+    for i, bbox in enumerate(bbox):
+        img = cv.putText(img, str(i), np.array((bbox[0], bbox[1])) + padding, 
+                         cv.FONT_HERSHEY_SIMPLEX, fontScale, 0, 2, cv.LINE_AA)
+        img = cv.circle(img, np.array((bbox[0], bbox[1])) + padding, radius=2, color=0, thickness=-1)
+        img = cv.rectangle(img, np.array((bbox[0], bbox[1])) + padding,
+                                np.array((bbox[2], bbox[3])) + padding, color=0)
+    return img
+
+def draw_comparison(gt_bbox, seen_gt, pred_bbox, seen_pred, img=None, shape=(640, 624), thickness=1,
+                    padding=0, id=False, mark_top_left=False):
+    """
+    Draw the comparison result between hand-labelled data and the detected particles. If the original
+    image is not provided, draw the bboxes on a white image defined by SHAPE ((matrix_row, matrix_column)
+    or (height, width)).
+
+    If draw ID or mark top left point, use the bboxes of the labelled data.
+    """
+    if img is None:
+        # BGR colored image.
+        img = np.full((shape[0], shape[1], 3), 255, dtype=np.uint8)
+    elif len(img.shape) != 3: # convert grayscale to BGR.
+        img = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
+
+    # Add a padding to see the texts that are outside of the boundary.
+    if padding > 0:
+        img = cv.copyMakeBorder(img, padding, padding, padding, padding, cv.BORDER_CONSTANT, value=(255,255,255))
+        # Draw border.
+        img = cv.rectangle(img, (padding, padding), np.array((shape[1], shape[0])) + padding, color=(0,0,0))
+    
+    for i, bbox in enumerate(gt_bbox):
+        if id:
+            img = cv.putText(img, str(i), np.array((bbox[0], bbox[1])) + padding, 
+                            cv.FONT_HERSHEY_SIMPLEX, 0.75, (0,0,0), 2, cv.LINE_AA)
+        if mark_top_left:
+            img = cv.circle(img, np.array((bbox[0], bbox[1])) + padding, radius=2, color=(0,0,0), thickness=-1)
+        
+        if seen_gt[i]:
+            img = cv.rectangle(img, np.array((bbox[0], bbox[1])) + padding,
+                                    np.array((bbox[2], bbox[3])) + padding, color=(0, 255,0))
+        else:
+            img = cv.rectangle(img, np.array((bbox[0], bbox[1])) + padding,
+                                    np.array((bbox[2], bbox[3])) + padding, color=(0, 0, 255))
+    
+    for i, bbox in enumerate(pred_bbox):
+        if seen_pred[i]:
+            img = cv.rectangle(img, np.array((bbox[0], bbox[1])) + padding,
+                                    np.array((bbox[2], bbox[3])) + padding, color=(0, 255,0))
+        else:
+            img = cv.rectangle(img, np.array((bbox[0], bbox[1])) + padding,
+                                    np.array((bbox[2], bbox[3])) + padding, color=(255, 0, 0))
+    #img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+    return img # BGR. To display in jupyter, convert to RGB first.
+    

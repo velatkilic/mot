@@ -155,7 +155,7 @@ class BeadDataset(torch.utils.data.Dataset):
         return img, target
 
 class BeadDatasetFile(torch.utils.data.Dataset):
-    def __init__(self, filename, tsf=None):
+    def __init__(self, filename, len=-1, tsf=None):
         self.filename = filename
         if tsf is None:
             self.tsf = transforms.Compose([
@@ -164,7 +164,10 @@ class BeadDatasetFile(torch.utils.data.Dataset):
         else:
             self.tsf = tsf
 
-        self.length = len(glob.glob(filename))
+        if len == -1:
+            self.length = len(glob.glob(filename))
+        else:
+            self.length = len
 
     def __len__(self):
         return self.length
@@ -172,7 +175,6 @@ class BeadDatasetFile(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         # read data
         seg, bbox = read_target_from_file(self.filename, idx)
-
         iname = os.path.join(self.filename, "syn_bead_" + str(idx) + ".png")
         img = cv.imread(iname)
 

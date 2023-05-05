@@ -6,6 +6,7 @@ Utility functions
 import numpy as np
 import cv2 as cv
 import math
+from typing import List
 from xmot.logger import Logger
 from sklearn.mixture import BayesianGaussianMixture
 
@@ -280,13 +281,18 @@ def unionBox(bbox1, bbox2):
 
     return [x1, y1, x2, y2]
 
-
 def intersect(bbox1, bbox2):
     x1 = max(bbox1[0], bbox2[0])
     y1 = max(bbox1[1], bbox2[1])
     x2 = min(bbox1[2], bbox2[2])
     y2 = min(bbox1[3], bbox2[3])
     return (max(0, x2 - x1 + 1.) * max(0, y2 - y1 + 1.)) > 0
+
+def areaBbox(bbox):
+    """
+    Calculate the area of the rectangular defined by the bbox.
+    """
+    return (bbox[2] - bbox[0] + 1.) * (bbox[3] - bbox[1] + 1.)
 
 def calcDist(bbox1,bbox2):
     cen1 = np.array([bbox1[0] + bbox1[2],bbox1[1] + bbox1[3]]) / 2.
@@ -433,3 +439,42 @@ def combine_images(n_row, n_column, images):
             img_combined[(h0*row):(h0*(row+1)), (w0*column):(w0*(column+1))] = img
 
     return img_combined
+
+def filterBbox(list_bbox: List[List[int]], list_cnt: List[np.ndarray]= None):
+    """
+    Postprocessing of list of bboxes and corresponding contours (in OpenCV format).
+
+    Current filters:
+    1. Check enclosement. 
+        If a smaller bbox is completed enclosed within a larger bbox, remove
+        the smaller bbox from the list.
+        TODO: Make the smaller bbox a bubble of the larger particle.
+        TODO: Use the topology hierarchy of contours instead of bboxes.
+    """
+    if len(list_cnt) != len(list_bbox):
+        print(f"Warning: Number of bbox and contours don't match. {len(list_cnt)} {len(list_bbox)}")
+
+    to_remove = np.zeros(len(list_bbox), dtype=bool)
+    
+    for i in range(0, len(list_bbox)):
+        if to_remove[i]:
+            continue
+        for j in range(i + 1, len(list_bbox)):
+            if to_remove[j]:
+                continue
+            bbox_i = list_bbox[i]
+            bbox_j = list_bbox[j]
+            area_i = areaBbox(bbox_i)
+            area_j = areaBbox(bbox_j)
+            if iom(bbox_i, bbox_j) == 1:
+                if area_i > area_j:
+                    to_remove[j] = True
+                else:
+                    to_remove[i] = True
+    
+    ret_bbox = [list_bbox[i] for i in range(len(list_bbox)) if not to_remove[i]]
+    ret_cnt = None
+    if list_cnt != None:
+        ret_cnt = [list_cnt[i] for i in range(len(list_bbox)) if not to_remove[i]]
+    return ret_bbox, ret_cnt
+    

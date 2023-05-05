@@ -11,7 +11,7 @@ from typing import List, Dict, Tuple
 
 from xmot.logger import Logger
 from xmot.config import AREA_THRESHOLD
-from xmot.mot.utils import drawBox
+from xmot.mot.utils import drawBox, areaBbox
 from xmot.utils.image_utils import get_contour_center
 # from xmot.mot.utils import mergeBoxes
 # from xmot.datagen.bead_gen import BeadDataset
@@ -31,7 +31,7 @@ class DNN:
         self.score_threshold = score_threshold
         # DNN model
         if model is None:
-            self.model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
+            self.model = torchvision.models.detection.maskrcnn_resnet50_fpn(weights='COCO_V1')
             # bounding box regression
             in_features = self.model.roi_heads.box_predictor.cls_score.in_features
             self.model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
@@ -62,15 +62,17 @@ class DNN:
             transforms.ToTensor()
         ])
 
-    def _train_one_epoch(self, train_dataloader, print_interval):
+    def _train_one_epoch(self, train_dataloader, print_interval, epochID=-1):
+        iter = 0
         for images, targets in train_dataloader:
             images = list(image.to(self.device) for image in images)
             targets = [{k: v.to(self.device) for k, v in t.items()} for t in targets]
+            iter = iter + 1
 
             loss_dict = self.model(images, targets)
 
-            if print_interval != 0:
-                print(f'Loss summary: ')
+            if (iter % print_interval) == 0:
+                print(f'Loss summary for epoch {epochID} at iteration {iter}')
                 for l in loss_dict:
                     print(f'{l} {loss_dict[l]}')
 
@@ -84,7 +86,7 @@ class DNN:
     def train(self, train_dataloader, epoch=20, print_interval=1000):
         self.model.train() # Set on training mode, not actually updating the parameter.
         for i in range(epoch):
-            self._train_one_epoch(train_dataloader, print_interval)
+            self._train_one_epoch(train_dataloader, print_interval, epochID=i)
         self.model.eval()
 
     def predict(self, img):
@@ -116,7 +118,6 @@ class DNN:
 
     def save_model(self, path="model.pth"):
         torch.save(self.model, path)
-
 
 class Canny:
     """
@@ -196,7 +197,7 @@ class GMM:
         #                                             varThreshold=varThreshold)
         #self.__train()
 
-    def predict_by_batch(self, history=-1, distance=1, mahal_distance=16.0, outdir=None) \
+    def predict_by_batch(self, history=-1, distance=-1, mahal_distance=16.0, outdir=None, outId=None) \
         -> Tuple[Dict[int, List[int]], Dict[int, List[np.ndarray]]]:
         """
         Train the background using a batch of frames in the future and then detect the current
@@ -230,10 +231,14 @@ class GMM:
             2. dict of contours in each images, with frame id as key. The contours in each list
                match the order of corresponding bbox in the lists of the first dict.
         """
-        if history == -1:
+        if history == -1 and distance == -1: # Automatically decide both parameter
             history = int(len(self.images) / 2)
             distance = 1
+        elif history == -1: # Only automatically decide history
+            history = int(len(self.images) / 2)
 
+        # TODO: return the intermediate pictures in a dict and save them in scripts outside the
+        # GMM class.
         if outdir != None:
             outDir = Path(outdir)
             outDir.mkdir(exist_ok=True)
@@ -249,6 +254,8 @@ class GMM:
             masksDir.mkdir(exist_ok=True)
             centroidDir = outDir.joinpath("centroid") # Plot centroid of the contours
             centroidDir.mkdir(exist_ok=True)
+            if outId is None: # If not specify the set of images to write out, write out all of them.
+                outId = list(range(len(self.images)))
 
         # The default "detectShadows" is True. It will render objects in gray instead of white.
         # Turn it off.
@@ -279,7 +286,7 @@ class GMM:
                 mask = cv.morphologyEx(mask, cv.MORPH_OPEN, GMM.KERNEL, iterations=1)
                 mask = cv.morphologyEx(mask, cv.MORPH_CLOSE, GMM.KERNEL, iterations=1)
                 
-                if outdir != None:
+                if outdir != None and i in outId:
                     cv.imwrite(str(backgroundDir.joinpath(f"background_{i}.png")), gmm.getBackgroundImage())
                     cv.imwrite(str(plainForegroundDir.joinpath(f"plainForeground_{i}.png")), orig_mask)
                     cv.imwrite(str(processedForegroundDir.joinpath(f"processedForeground_{i}.png")), mask)
@@ -292,23 +299,28 @@ class GMM:
                 filtered_contours = [] # Contours that are at least the area_threshold
                 bbox = []
                 for cnt in contours:
-                    area = cv.contourArea(cnt)
-                    if area > self.area_threshold:
-                        x, y, w, h = cv.boundingRect(cnt)
-                        bbox.append([x, y, x + w, y + h]) # In the PyTorch format.
+                    x, y, w, h = cv.boundingRect(cnt)
+                    b = [x, y, x + w, y + h]
+                    areaB = areaBbox(b)
+                    areaCnt = cv.contourArea(cnt)
+                    # TODO: In all detector and loading of labelled data, use contour 
+                    # area as the threshold, not bbox.
+                    if areaB > self.area_threshold:
+                        bbox.append(b) # In the PyTorch format.
                         filtered_contours.append(cnt)
                 
-                combined_list = list(zip(bbox, filtered_contours))
-                # Sort the list of bboxes by the coordinates of the top left corner.
-                # Sort them by y first (row) and then x (column). -- More intuitive when drawing
-                # them out on images.
-                combined_list.sort(key=lambda k: (k[0][1], k[0][0]))
-                bbox, filtered_contours = zip(*combined_list)
+                if len(bbox) > 0:
+                    combined_list = list(zip(bbox, filtered_contours))
+                    # Sort the list of bboxes by the coordinates of the top left corner.
+                    # Sort them by y first (row) and then x (column). -- More intuitive when drawing
+                    # them out on images.
+                    combined_list.sort(key=lambda k: (k[0][1], k[0][0]))
+                    bbox, filtered_contours = zip(*combined_list)
                 
                 dict_bbox[i] = bbox
                 dict_contours[i] = filtered_contours
                 
-                if outdir != None:
+                if outdir != None and i in outId:
                     #img_contoured = cv.drawContours(cv.cvtColor(images[i], cv.COLOR_GRAY2BGR), 
                     #        filtered_contours, -1, (0, 0, 255), thickness=GMM.CNT_THICKNESS)
                     #cv.imwrite(str(contouredOnSubtractedDir.joinpath("GMM_{:d}.png".format(i))), img_contoured)
@@ -322,7 +334,7 @@ class GMM:
                     cv.imwrite(str(masksDir.joinpath("GMM_{:d}.png".format(i))), orig_img_contoured)
                     
                     # Plot centroid of contours with contours
-                    #orig_img_centroid = np.copy(orig_img_contoured)
+                    orig_img_centroid = np.copy(orig_img_contoured)
                     for cnt in filtered_contours:
                         orig_img_centroid = cv.circle(orig_img_contoured, get_contour_center(cnt),
                                 radius = 3, color=(0, 255, 0), thickness=-1)

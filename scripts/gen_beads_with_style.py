@@ -22,21 +22,23 @@ import click
               "set to 384.")
 @click.option("--sigma", default=1, help="Standard deviation of gaussian filter. Negative value to shut it off.")
 @click.option("--save-orig", is_flag=True, default=False, help="Save the original content image before style transfer.")
-@click.option("--no-overlap", is_flag = True, default=True, help="Allow overlap or not.")
-@click.option("--debug", is_flag = True, default=True)
+@click.option("--allow-overlap", is_flag=True, help="Allow overlap or not.")
+#@click.option("--debug", is_flag=True, default=True)
 def generate(style_dir, num, outdir, model, max_radius, min_radius, max_beads, min_beads,
-             img_size, sigma, save_orig, no_overlap, debug):
-    if debug:
-        print("Setting:")
-        print("Model path:", model)
-        print("max-radius", max_radius)
-        print("min-radius", min_radius)
-        print("max-beads", max_beads)
-        print("min-beads", min_beads)
-        print("img-size", img_size)
-        print("sigma", sigma)
-        print("save-orig", save_orig)
-        print("no-overlap", no_overlap)
+             img_size, sigma, save_orig, allow_overlap):
+    #if debug:
+    no_overlap = not allow_overlap # Default is True, i.e. don't allow overlap.
+
+    print("Setting:")
+    print("Model path:", model)
+    print("max-radius", max_radius)
+    print("min-radius", min_radius)
+    print("max-beads", max_beads)
+    print("min-beads", min_beads)
+    print("img-size", img_size)
+    print("sigma", sigma)
+    print("save-orig", save_orig)
+    print("no-overlap", no_overlap)
 
     os.makedirs(outdir, exist_ok=True)
     style_images = Dataset(image_folder = style_dir)
