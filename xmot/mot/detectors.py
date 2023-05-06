@@ -303,10 +303,11 @@ class GMM:
                 
                 # Find all the outmost contours.
                 outmost = np.zeros(len(contours), dtype=bool)
-                j = 0 # The 0-th contour is always one of the outmost contours.
-                while j != -1:
-                    outmost[j] = True
-                    j = hierarchy[0][j][0] # Find next contour at the same level. (level-tree traversal)
+                if len(outmost) > 0:
+                    j = 0 # The 0-th contour is always one of the outmost contours.
+                    while j != -1:
+                        outmost[j] = True
+                        j = hierarchy[0][j][0] # Find next contour at the same level. (level-tree traversal)
                 
                 filtered_contours = [] # Contours that are at least the area_threshold
                 bbox = []
