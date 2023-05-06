@@ -310,8 +310,8 @@ class GMM:
                 
                 filtered_contours = [] # Contours that are at least the area_threshold
                 bbox = []
-                for j, cnt in enumerate(contours):
-                    if skip_nested and not outmost[j]:
+                for k, cnt in enumerate(contours):
+                    if skip_nested and not outmost[k]:
                         continue # Skip the nested contours. TODO: Use nested contours as bubbles.
 
                     x, y, w, h = cv.boundingRect(cnt)
