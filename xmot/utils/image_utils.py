@@ -2,6 +2,7 @@ import sys, os
 import cv2 as cv
 import numpy as np
 import natsort, re
+import math
 from pathlib import Path
 from scipy.stats import mode
 from typing import List, Tuple
@@ -71,3 +72,26 @@ def load_images_from_dir(dir, start_id=0, end_id=sys.maxsize, ext=None, grayscal
         orig_images = [cv.imread(f) for f in files]  # color pics are already in BGR order, not RBG
     orig_image_names = [Path(f).resolve().name for f in files]
     return orig_images, orig_image_names
+
+def combine_images(n_row, n_column, images):
+    """
+    Paste a list of images into a panel of n_row * n_column. Assume all images in the list
+    share the same size of the first image of the list.
+    """
+    if len(images[0].shape) == 3:
+        h0, w0, n_color = images[0].shape
+        img_combined = np.zeros((h0 * n_row, w0 * n_column, n_color), np.uint8)
+    elif len(images[0].shape) == 2:
+        h0, w0 = images[0].shape
+        img_combined = np.zeros((h0 * n_row, w0 * n_column), np.uint8)
+
+    for i in range(0, len(images)):
+        img  = images[i]
+        row = math.floor(i / n_column)
+        column = i % n_column
+        if len(images[0].shape) == 3:
+            img_combined[(h0*row):(h0*(row+1)), (w0*column):(w0*(column+1)), :] = img
+        else:
+            img_combined[(h0*row):(h0*(row+1)), (w0*column):(w0*(column+1))] = img
+
+    return img_combined

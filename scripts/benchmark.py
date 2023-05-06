@@ -52,7 +52,7 @@ def batch(data_dir, model, output, area_threshold, tolerance, debug_output):
     labelled_data = {}
     total_num_ptcls = 0
     for xml in xmls:
-        ps, file_name = parse_pascal_xml(xml) # Labelled particle from this single file.
+        ps, file_name = parse_pascal_xml(xml, area_threshold=area_threshold) # Labelled particle from this single file.
         img_path = str(Path(data_dir).joinpath(file_name))
         labelled_data[img_path] = []
         img = cv.imread(img_path, cv.IMREAD_GRAYSCALE)

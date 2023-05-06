@@ -417,29 +417,6 @@ def merge_with_BGMM(bbox, mask, mag):
     bbox_new = np.array(bbox_new)
     return bbox_new, mask_new
 
-def combine_images(n_row, n_column, images):
-    """
-    Paste a list of images into a panel of n_row * n_column. Assume all images in the list
-    share the same size of the first image of the list.
-    """
-    if len(images[0].shape) == 3:
-        h0, w0, n_color = images[0].shape
-        img_combined = np.zeros((h0 * n_row, w0 * n_column, n_color), np.uint8)
-    elif len(images[0].shape) == 2:
-        h0, w0 = images[0].shape
-        img_combined = np.zeros((h0 * n_row, w0 * n_column), np.uint8)
-
-    for i in range(0, len(images)):
-        img  = images[i]
-        row = math.floor(i / n_column)
-        column = i % n_column
-        if len(images[0].shape) == 3:
-            img_combined[(h0*row):(h0*(row+1)), (w0*column):(w0*(column+1)), :] = img
-        else:
-            img_combined[(h0*row):(h0*(row+1)), (w0*column):(w0*(column+1))] = img
-
-    return img_combined
-
 def filterBbox(list_bbox: List[List[int]], list_cnt: List[np.ndarray]= None):
     """
     Postprocessing of list of bboxes and corresponding contours (in OpenCV format).

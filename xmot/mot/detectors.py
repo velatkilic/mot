@@ -164,14 +164,18 @@ class GMM:
     CNT_THICKNESS = 1 # Thickness of contour when drawing.
     
     def __init__(self, images: List[np.ndarray], train_images: List[np.ndarray] = None,
-                 crop: List[int] = None, varThreshold=16, area_threshold=AREA_THRESHOLD):
+                 orig_images: List[np.ndarray] = None, crop: List[int] = None, 
+                 varThreshold=16, area_threshold=AREA_THRESHOLD):
         """
         Attributes:
-            images         : List       List of frames.
+            images         : List       List of frames for prediction.
             train_images   : List       List of frames used for training. By default, it's the same
                                         as the images to be detected. Train_images are the actual
                                         images used in updating the GMM model and in prediction.
-                                        The "images" are mostly used for output and debug.
+                                        If not provided, it's the same as the "images" for prediction.
+            orig_images    : List       List of original frames before any preprocessing. Mostly
+                                        used for output and debug. If not provided, it's the
+                                        same as the "images" used in prediction.
             varThreshold   : int        Threshold of pixel background identification in MOB2 of cv.
                                         Use same default as OpenCV.
             area_threshold : int        Minimal area of bbox to be considered as a valid particle.
@@ -184,7 +188,9 @@ class GMM:
             it_closing     : int        Parameter of cv.morphologyEx
         """
         self.images = images
-        self.train_images = train_images if train_images != None else None
+        self.train_images = train_images if train_images is not None else images
+        self.orig_images = orig_images if orig_images is not None else images
+
         #self.it_closing = it_closing
         self.area_threshold = area_threshold
         self.crop = crop
@@ -194,8 +200,8 @@ class GMM:
         #                                             varThreshold=varThreshold)
         #self.__train()
 
-    def predict_by_batch(self, history=-1, distance=-1, mahal_distance=16.0, outdir=None, outId=None) \
-        -> Tuple[Dict[int, List[int]], Dict[int, List[np.ndarray]]]:
+    def predict_by_batch(self, history=-1, distance=-1, mahal_distance=16.0, outdir=None, outId=None,
+                         skip_nested = True) -> Tuple[Dict[int, List[int]], Dict[int, List[np.ndarray]]]:
         """
         Train the background using a batch of frames in the future and then detect the current
         batch of frames. It separate the images under detection with the background as far as
@@ -223,16 +229,17 @@ class GMM:
                                       the default in OpenCV.
             outdir         : str      When not None, write full set of intermediate images to the
                                       outdir. Primarily for debugging purposes.
+            skip_nested    : bool     Whether remove nested contours from the returned list.
         Return:
             1. dict of bboxes in each image, with frame_id (image id) as key.
             2. dict of contours in each images, with frame id as key. The contours in each list
                match the order of corresponding bbox in the lists of the first dict.
         """
         if history == -1 and distance == -1: # Automatically decide both parameter
-            history = int(len(self.images) / 2)
+            history = int(len(self.train_images) / 2)
             distance = 1
         elif history == -1: # Only automatically decide history
-            history = int(len(self.images) / 2)
+            history = int(len(self.train_images) / 2)
 
         # TODO: return the intermediate pictures in a dict and save them in scripts outside the
         # GMM class.
@@ -268,9 +275,9 @@ class GMM:
             #gmm.apply(images[i_train % len(images)], 0, learningRate=1) # Reinitialize the history
             for i in range(i_train, i_train + history):
                 gmm.apply(self.train_images[i % len(self.train_images)])
-            for i in range(i_detect, min(i_detect + history, len(self.train_images))):
+            for i in range(i_detect, min(i_detect + history, len(self.images))):
                 # rate=0: stop updating the background.
-                orig_mask = gmm.apply(self.train_images[i], None, learningRate=0)
+                orig_mask = gmm.apply(self.images[i], None, learningRate=0)
             
                 # Remove noise
                 mask = cv.morphologyEx(orig_mask, cv.MORPH_OPEN, GMM.KERNEL, iterations=1)
@@ -293,9 +300,20 @@ class GMM:
                 img_padded = cv.copyMakeBorder(mask, 1, 1, 1, 1, cv.BORDER_CONSTANT, value=0)
 
                 contours, hierarchy = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+                
+                # Find all the outmost contours.
+                outmost = np.zeros(len(contours), dtype=bool)
+                j = 0 # The 0-th contour is always one of the outmost contours.
+                while j != -1:
+                    outmost[j] = True
+                    j = hierarchy[0][j][0] # Find next contour at the same level. (level-tree traversal)
+                
                 filtered_contours = [] # Contours that are at least the area_threshold
                 bbox = []
-                for cnt in contours:
+                for j, cnt in enumerate(contours):
+                    if skip_nested and not outmost[j]:
+                        continue # Skip the nested contours. TODO: Use nested contours as bubbles.
+
                     x, y, w, h = cv.boundingRect(cnt)
                     b = [x, y, x + w, y + h]
                     areaB = areaBbox(b)
@@ -311,6 +329,7 @@ class GMM:
                     # Sort the list of bboxes by the coordinates of the top left corner.
                     # Sort them by y first (row) and then x (column). -- More intuitive when drawing
                     # them out on images.
+                    # Note: After the sorting, the contour hierarchy would be broken.
                     combined_list.sort(key=lambda k: (k[0][1], k[0][0]))
                     bbox, filtered_contours = zip(*combined_list)
                 
@@ -322,11 +341,11 @@ class GMM:
                     #        filtered_contours, -1, (0, 0, 255), thickness=GMM.CNT_THICKNESS)
                     #cv.imwrite(str(contouredOnSubtractedDir.joinpath("GMM_{:d}.png".format(i))), img_contoured)
                     
-                    orig_img_bbox = drawBox(cv.cvtColor(self.images[i], cv.COLOR_GRAY2BGR), bbox)
+                    orig_img_bbox = drawBox(cv.cvtColor(self.orig_images[i], cv.COLOR_GRAY2BGR), bbox)
                     cv.imwrite(str(outDir.joinpath("GMM_{:d}.png".format(i))), orig_img_bbox)
                     
                     # Use contour as red Masks.
-                    orig_img_contoured = cv.drawContours(cv.cvtColor(self.images[i], cv.COLOR_GRAY2BGR), 
+                    orig_img_contoured = cv.drawContours(cv.cvtColor(self.orig_images[i], cv.COLOR_GRAY2BGR), 
                             filtered_contours, -1, (0, 0, 255), thickness=GMM.CNT_THICKNESS)
                     cv.imwrite(str(masksDir.joinpath("GMM_{:d}.png".format(i))), orig_img_contoured)
                     

@@ -6,9 +6,10 @@ import json
 from typing import Dict, List
 from xmot.digraph.parser import parse_pascal_xml
 from xmot.digraph.particle import Particle
+from xmot.config import AREA_THRESHOLD
 from typing import List, Tuple, Dict
 
-def load_labels(data_dir) -> Tuple[Dict[int, Dict[int, List[int]]], Dict[int, Dict[int, np.ndarray]]]:
+def load_labels(data_dir, area_threshold=AREA_THRESHOLD) -> Tuple[Dict[int, Dict[int, List[int]]], Dict[int, Dict[int, np.ndarray]]]:
     """
     Return a dict of dict, the inner dict of which is {"<frame_id>" : List of bbox}, and the
     outer dict of which uses video id as the key.
@@ -20,7 +21,7 @@ def load_labels(data_dir) -> Tuple[Dict[int, Dict[int, List[int]]], Dict[int, Di
     labels = {}
     images = {}
     for xml in xmls:
-        particles, img_file_name = parse_pascal_xml(xml)
+        particles, img_file_name = parse_pascal_xml(xml, area_threshold=area_threshold)
         obj = re.match(".*_([0-9]+)_([a-zA-Z]*)([0-9]+)\.([a-zA-Z]+)", img_file_name)
         video_id = int(obj.group(1))
         image_id = int(obj.group(3)) # frame_id
@@ -121,12 +122,16 @@ def get_confusion_matrix(seen_gt: List[bool], seen_pred: List[bool]):
     """
     Collect the count of true_positive, false_positive and false_negative from comparison 
     results.
+    "false_positive": Wrong prediction. Model predicted the existence of a particle, but there's no
+                      particle. (i.e. over prediction)
+    "false_negative": Wrong prediction. There's a particle, but the model failed to catch it. (i.e.
+                      missed prediction)
     """
     # np.sum(seen_gt) sould be equal to np.sum(seen_pred)
     # np.int64 is not serializable and cannot be saved directly into JSON.
     dict_confusion =  {"true_positive": int(np.sum(seen_gt)), \
-                        "false_positive": int(len(seen_gt) - np.sum(seen_gt)), \
-                        "false_negative": int(len(seen_pred) - np.sum(seen_pred))}
+                        "false_positive": int(len(seen_pred) - np.sum(seen_pred)), \
+                        "false_negative": int(len(seen_gt) - np.sum(seen_gt))}
     return dict_confusion
 
 def merge_confusion_matrix(dict1: Dict, dict2: Dict) -> Dict:
@@ -140,13 +145,18 @@ def merge_confusion_matrix(dict1: Dict, dict2: Dict) -> Dict:
 
 def calc_precision(dict_confusion):
     """
-    How precision of the prediction results.
+    Out of all the predicted particles, the ratio of predictions being actually particles. 
+    (i.e. confidence rate)
     """
     total_predict = dict_confusion["true_positive"] + dict_confusion["false_positive"]
     correct_predict = dict_confusion["true_positive"]
     return correct_predict / total_predict
 
 def calc_recall(dict_confusion):
+    """
+    Out of all the ground truth particles, the ratio of particles being catched by a model.
+    (i.e. catch rate)
+    """
     total_ground_truth = dict_confusion["true_positive"] + dict_confusion["false_negative"]
     correct_predict = dict_confusion["true_positive"]
     return correct_predict / total_ground_truth

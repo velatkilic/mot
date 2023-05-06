@@ -5,7 +5,9 @@ import xml.etree.ElementTree as ET
 
 from xmot.logger import Logger
 from xmot.digraph.particle import Particle
+from xmot.mot.utils import areaBbox
 from xmot.digraph import commons
+from xmot import config
 
 """
 Parser of xmot.digraph.particle in different formats.
@@ -75,7 +77,7 @@ def load_blobs_from_text(file_name: str) -> List[Particle]:
                 particles.append(Particle([x1_new, y1_new], bbox=[width_new, height_new], id=id, time_frame=time_frame))
     return particles
 
-def parse_pascal_xml(file_path: str) -> Tuple[List[Particle], str]:
+def parse_pascal_xml(file_path: str, area_threshold=config.AREA_THRESHOLD) -> Tuple[List[Particle], str]:
     """
     Parse one labelled data in the PASCAL VOC format.
 
@@ -115,6 +117,9 @@ def parse_pascal_xml(file_path: str) -> Tuple[List[Particle], str]:
         ymin = int(p_bbox.find("ymin").text)
         xmax = int(p_bbox.find("xmax").text)
         ymax = int(p_bbox.find("ymax").text)
+        bbox = [xmin, ymin, xmax, ymax]
+        if areaBbox(bbox) <= area_threshold:
+            continue
         p = Particle(position=[xmin, ymin], bbox=[xmax - xmin, ymax - ymin],
                      type=p_type, shape=p_shape, bubble=p_bubble)
         particles.append(p)

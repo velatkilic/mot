@@ -18,7 +18,7 @@ orig_ext = None
 @click.group()
 @click.argument("input_dir")
 @click.option("--start-id", default=0, help="ID of the first image to be included in the video")
-@click.option("--end-id", default=sys.maxsize, help="ID of the last image to be included in the video")
+@click.option("--end-id", default=sys.maxsize, help="ID of the last image (inclusive) to be included in the video")
 @click.option("--ext", type=str, default=None, help="Format of input images. If not specified, " \
               "use the first found valid image format.")
 def process(input_dir, start_id, end_id, ext):
