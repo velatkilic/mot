@@ -11,10 +11,10 @@ from typing import List, Tuple, Dict
 
 def load_labels(data_dir, area_threshold=AREA_THRESHOLD) -> Tuple[Dict[int, Dict[int, List[int]]], Dict[int, Dict[int, np.ndarray]]]:
     """
-    Return a dict of dict, the inner dict of which is {"<frame_id>" : List of bbox}, and the
-    outer dict of which uses video id as the key.
+    Return list of bboxes and images in labelled data in a nested dict. The outer dict uses
+    video_id as key and inner dict uses image_id as key.
 
-    data_dir assumes the label_studio format. It should contains two subfolder: "Annotations",
+    data_dir assumes the Label Studio format. It should contains two subfolder: "Annotations",
     and "images".
     """
     xmls = glob.glob("{:s}/Annotations/*.xml".format(data_dir))
@@ -86,8 +86,13 @@ def union(bbox_1, bbox_2) -> List[int]:
 def compare_bbox(gt_bbox: List[List[int]], pred_bbox: List[List[int]], threshold = 0.5,
                  allow_enclose = False):
     """
-    "allow_enclose" is set to False by default, since we might have a partial detection of a particle.
-    "allow_enclose" might artificially increase localization accuracy.
+    Attribute:
+        threshold       float   0.5     IoU threshold
+        allow_enclose   bool    False   Whether allow enclosed predicted bbox to be considered
+                                        as positive. Since we might have a partial detection 
+                                        of a particle, "True" value might artificially 
+                                        increase localization accuracy. Therefore, default is set
+                                        to False.
     """
     seen_gt = np.zeros(len(gt_bbox), dtype=bool)
     seen_pred = np.zeros(len(pred_bbox), dtype=bool)
@@ -111,7 +116,7 @@ def compare_bbox(gt_bbox: List[List[int]], pred_bbox: List[List[int]], threshold
                 # The predicted bounding box is almost enclosed in the labelled
                 # bounding box. It often happens when the particle is very small
                 # and the hand-labeled bbox contains too much a margin.
-                if iou(intersect(gt, pred), pred) > 0.8:
+                if iou(intersect(gt, pred), pred) > 0.9:
                     seen_gt[i] = True
                     seen_pred[j] = True
                     break
@@ -150,7 +155,14 @@ def calc_precision(dict_confusion):
     """
     total_predict = dict_confusion["true_positive"] + dict_confusion["false_positive"]
     correct_predict = dict_confusion["true_positive"]
-    return correct_predict / total_predict
+    
+    # Nothing is predicted. Distinguish between a high confidence value causing no prediction or
+    # a bright field image with nothing to predict.
+    if total_predict == 0:
+        total_ground_truth = dict_confusion["true_positive"] + dict_confusion["false_negative"]
+        return 1. if total_ground_truth == 0 else 0.
+                        
+    return correct_predict / total_predict 
 
 def calc_recall(dict_confusion):
     """
@@ -159,7 +171,12 @@ def calc_recall(dict_confusion):
     """
     total_ground_truth = dict_confusion["true_positive"] + dict_confusion["false_negative"]
     correct_predict = dict_confusion["true_positive"]
-    return correct_predict / total_ground_truth
+    
+    if total_ground_truth == 0:
+        total_predict = dict_confusion["true_positive"] + dict_confusion["false_positive"]
+        return 1. if total_predict == 0 else 0.
+
+    return correct_predict / total_ground_truth if total_ground_truth > 0 else 1.
 
 def bbox_area(bbox: List[int]) -> int:
     return (bbox[2] - bbox[0] + 1) * (bbox[3] - bbox[1] + 1)

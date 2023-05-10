@@ -9,23 +9,66 @@ from typing import List, Tuple
 
 from xmot.config import IMAGE_FORMAT, IMAGE_FILE_PATTERN
 
-def subtract_brightfield(img_video, img_bf):
+def subtract_brightfield_by_scaling(img_video, img_bf, scale = 0.8, shift_back=False):
     """
+    Deprecated. Leave here as a record.
+
     Subtract IMG_BF from IMG_VIDEO and return a new image.
     """
     img_bf_invert = cv.bitwise_not(img_bf)
     img_video_invert = cv.bitwise_not(img_video)
     bf_mode = mode(img_bf_invert, axis=None)[0][0]
     video_mode = mode(img_video_invert, axis=None)[0][0]
-    factor = 0.8 * video_mode / bf_mode # Make the peak of histogram of the brightfield 
-                                        # 0.8 to that of the video.
-    # Normalize the background to this image.
+    factor = scale * video_mode / bf_mode # Make the peak of histogram of the brightfield 
+                                          # 0.8 to that of the video.
+    # Scaling the peak of the pixel distribution of the brightfield image relative to that
+    # of the video image.
     img_bf_invert = np.array(img_bf_invert * factor, dtype=np.uint8)
 
+    # Taking care of the underflow problem of uint8.
     img_inverted_subtract = np.subtract(img_video_invert, img_bf_invert)
     img_inverted_subtract[img_bf_invert > img_video_invert] = 0
+
     img_inverted_subtract = cv.bitwise_not(img_inverted_subtract) # Inverse back so particles are dark.
+
+    if shift_back:
+        _mode_orig = mode(img_video, axis=None)[0][0]
+        _mode_result = mode(img_inverted_subtract, axis=None)[0][0]
+        img_inverted_subtract = img_inverted_subtract - (_mode_result - _mode_orig)
+
     return img_inverted_subtract, img_video_invert, img_bf_invert, bf_mode, video_mode, factor
+
+def subtract_brightfield_by_shifting(img_video, img_bf, scale=1, shift_back=False):
+    """
+    Subtract IMG_BF from IMG_VIDEO and return a new image.
+
+    This function shifts the brightfield image rather than scaling it by multiple a factor. This
+    way the shape of the pixcel distribution is saved.
+    """
+    img_bf_invert = cv.bitwise_not(img_bf)
+    img_video_invert = cv.bitwise_not(img_video)
+    bf_invert_mode = mode(img_bf_invert, axis=None)[0][0]
+    video_invert_mode = mode(img_video_invert, axis=None)[0][0]
+    
+    # Shfit the peak of the pixel distribution of bf image to align with that of the video.
+    shift = bf_invert_mode - scale * video_invert_mode
+    img_bf_invert_shifted = np.array(img_bf_invert - shift, dtype=np.uint8)
+    img_bf_invert_shifted[img_bf_invert < shift] = 0 # Taking care of the underflow problem of uint8.
+
+    img_inverted_subtract = np.subtract(img_video_invert, img_bf_invert_shifted)
+    img_inverted_subtract[img_video_invert < img_bf_invert_shifted] = 0
+
+    img_result = cv.bitwise_not(img_inverted_subtract) # Inverse back so particles are dark.
+
+    if shift_back:
+        # Shift the pixel distribution of image back to the original peak.
+        _video_mode = mode(img_result, axis=None)[0][0] # likely a large value close to 256.
+        _orig_video_mode = mode(img_video, axis=None)[0][0]
+        _shift = _video_mode - _orig_video_mode
+        # Recover the original background pixel value by subtracting a constant value
+        img_result = img_result - _shift
+
+    return img_result, img_video_invert, img_bf_invert_shifted, bf_invert_mode, video_invert_mode, shift
 
 def get_contour_center(cnt) -> List[int]:
     moments = cv.moments(cnt) # OpenCV contour object: numpy.ndarray of shape (n, 1, 2)

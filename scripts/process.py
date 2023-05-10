@@ -5,7 +5,8 @@ import sys
 import click
 import natsort
 from pathlib import Path
-from xmot.utils.image_utils import subtract_brightfield as subtract_bf
+from xmot.utils.image_utils import subtract_brightfield_by_shifting as sbf_shifting
+from xmot.utils.image_utils import subtract_brightfield_by_scaling as sbf_scaling
 from xmot.config import IMAGE_FORMAT
 
 # Global variables. Simpler alternatives than passing click.context object.
@@ -91,14 +92,21 @@ def format_transform(output_dir, prefix, new_ext):
 @process.command()
 @click.argument("output_dir")
 @click.argument("brightfield")
+@click.option("--scale", default=1.0, type=float, help="Ratio of the peak pixel distribution of "\
+              "brightfieldand image relative to video image.")
+@click.option("--use-scale", is_flag=True, help="Use scaling to subtract brightfield.")
+@click.option("--shift-back", is_flag=True, help="Shift the peak of pixel distribution back to that "\
+              "of the orignl image. Default is false, since GMM works better on non-shifted images.")
 @click.option("--prefix", default=None, help="Prefix of the names of output images. If used, assume"\
               " input image names follow the pattern <old_prefix>_<id>.<ext>.")
-def subtract_brightfield(output_dir, brightfield, prefix):
+def subtract_brightfield(output_dir, brightfield, prefix, scale, use_scale, shift_back):
     """
     Subtracting BRIGHTFILED image from input images and write out to OUTPUT_DIR.
 
     Only works for grayscale image for now.
     """
+    if use_scale:
+        print("Note: Use the scaling approach to subtract brightfield image.")
     global orig_images, orig_ext, orig_image_names
     img_bf = cv.imread(brightfield, cv.IMREAD_GRAYSCALE)
     if prefix == None:
@@ -108,7 +116,11 @@ def subtract_brightfield(output_dir, brightfield, prefix):
 
     for i in range(len(orig_images)):
         img = cv.cvtColor(orig_images[i], cv.COLOR_BGR2GRAY)
-        img_subtracted = subtract_bf(img, img_bf)[0]
+        if not use_scale:
+            # This is the default option. Simple shifting of the brightfield image.
+            img_subtracted, *_ = sbf_shifting(img, img_bf, scale=scale, shift_back=shift_back)
+        else:
+            img_subtracted, *_ = sbf_scaling(img, img_bf, scale=scale, shift_back=shift_back)
         cv.imwrite(os.path.join(output_dir, orig_image_names[i]), img_subtracted)
 
 @process.command()

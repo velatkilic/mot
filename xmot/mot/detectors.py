@@ -101,7 +101,7 @@ class DNN:
                 mask = mask[indx, ...]
                 scor = scor[indx, ...]
 
-            # non-max suppression
+            # non-max suppression to remove overlapping detections of the same object.
             if self.nms_threshold is not None:
                 indx = torchvision.ops.nms(bbox, scor, self.nms_threshold)
                 bbox = bbox[indx, ...]
