@@ -16,7 +16,7 @@ IMAGE_FORMAT=["jpg", "png", "tif", "tiff", "jpeg"]
 @click.option("--fps", default=24, help="Frames per second.")
 @click.option("--res", nargs=2, type=int, default=None, help="Resolution of input image. If not "\
               "specified, use the dimensions of the first image.") # A tuple
-@click.option("--format", default="avi", help="Default format of video")
+@click.option("--format", default="mp4", help="Default format of video")
 def generate_video(input_dir, output, ext, start_id, end_id, fps, res, format):
     """
     Generate the video OUTPUT from all iamges in the INPUT_DIR folder.

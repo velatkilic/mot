@@ -154,11 +154,13 @@ class Particle:
     def __str__(self) -> str:
         string = "Particle_id : {:4d}; Time_frame: {:4d}; ".format(self.id, self.time_frame) + \
                  "x, y: {:5.1f}, {:5.1f}; ".format(self.position[0], self.position[1]) + \
-                 "bbox: {:5.1f}, {:5.1f}; ".format(self.bbox[0], self.bbox[1]) + \
+                 "bbox (w, h): {:5.1f}, {:5.1f}; ".format(self.bbox[0], self.bbox[1]) + \
                  "Area: {:6.2f}; ".format(self.get_area()) + \
                  "Type: {:12s}; ".format(self.type) + \
                  "Shape: {:12s}; ".format(self.shape) + \
-                 "Has_bubble: {:5s}".format(str(self.bubble != None))
+                 ""
+                 #"Has_bubble: {:5s}".format(str(self.bubble != None))
+                 # Can't detect bubble for now. No point of printing it.
         return string
     
     def __repr__(self) -> str:

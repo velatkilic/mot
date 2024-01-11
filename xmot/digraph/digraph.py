@@ -516,13 +516,19 @@ class Digraph:
             end_frame = traj.get_end_time() if traj.get_end_time() > end_frame else end_frame
         return (start_frame, end_frame)
     
-    def detect_particle_shapes(self, video):
+    def detect_particle_shapes(self, video=None, images=None):
         """
         Args:
             video   String  Path to the original video file.
         """
+        if images is None and video is None:
+            Logger.error("SHAPE DETECTION: Need to provide path to the video or the extracted images")
+            return
         
-        images = utils.extract_images(video, to_gray=True)
+        # If both are given, use the given images. Don't load again.
+        if images is None and video is not None:
+            images = utils.extract_images(video, to_gray=True)
+
         for p in self.ptcls:
             shape = shape_detector.detect_shape(p, images[p.get_time_frame()])
             p.set_shape(shape)

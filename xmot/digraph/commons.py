@@ -7,4 +7,4 @@ from xmot.digraph.particle import Particle
 """
 
 TIMEFRAMELENGHT = 1 / 45000 * 1000 # 45,000 frames per second, speed-up by x1000.
-PIC_DIMENSION = [0, 0]             # Dimensions of picture in pixels.
+PIC_DIMENSION = [624, 640]         # Dimensions of picture in pixels in order: (width, height)

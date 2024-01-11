@@ -218,7 +218,7 @@ def load_prediction_cnt(file) -> Dict[int, List[np.ndarray]]:
     return obj[()]
 
 
-def draw_bbox_with_id(shape, bbox: List[List[int]], padding=30, fontScale=0.75) -> np.ndarray:
+def draw_bbox_with_id(shape, bbox: List[List[int]], img=None, padding=30, fontScale=0.75) -> np.ndarray:
     """
     Draw the list of bbox annotated with id on a white image. The image is padded to
     accomodate all the ids in case bboxes are close to boundaries of the image.
@@ -226,7 +226,9 @@ def draw_bbox_with_id(shape, bbox: List[List[int]], padding=30, fontScale=0.75) 
     Attributes:
         fontScale:  float   Font size.
     """
-    img = np.full(shape, 255, dtype=np.uint8)
+    if img is None:
+        img = np.full(shape, 255, dtype=np.uint8)
+
     # Add a padding to see the texts that are outside of the boundary.
     img = cv.copyMakeBorder(img, padding, padding, padding, padding, cv.BORDER_CONSTANT, value=255)
     # Coordinates (x, y) are (column-index, row-index)
@@ -269,7 +271,7 @@ def draw_comparison(gt_bbox, seen_gt, pred_bbox, seen_pred, img=None, shape=(640
         
         if seen_gt[i]:
             img = cv.rectangle(img, np.array((bbox[0], bbox[1])) + padding,
-                                    np.array((bbox[2], bbox[3])) + padding, color=(0, 255,0))
+                                    np.array((bbox[2], bbox[3])) + padding, color=(0, 255, 0))
         else:
             img = cv.rectangle(img, np.array((bbox[0], bbox[1])) + padding,
                                     np.array((bbox[2], bbox[3])) + padding, color=(0, 0, 255))
@@ -277,7 +279,7 @@ def draw_comparison(gt_bbox, seen_gt, pred_bbox, seen_pred, img=None, shape=(640
     for i, bbox in enumerate(pred_bbox):
         if seen_pred[i]:
             img = cv.rectangle(img, np.array((bbox[0], bbox[1])) + padding,
-                                    np.array((bbox[2], bbox[3])) + padding, color=(0, 255,0))
+                                    np.array((bbox[2], bbox[3])) + padding, color=(0, 255, 0))
         else:
             img = cv.rectangle(img, np.array((bbox[0], bbox[1])) + padding,
                                     np.array((bbox[2], bbox[3])) + padding, color=(255, 0, 0))

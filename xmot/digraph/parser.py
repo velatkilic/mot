@@ -45,7 +45,7 @@ def load_blobs_from_excel(file_name: str) -> List[Particle]:
     
     return particles
 
-def load_blobs_from_text(file_name: str) -> List[Particle]:
+def load_blobs_from_text(file_name: str, img_height=commons.PIC_DIMENSION[0], img_width=commons.PIC_DIMENSION[1]) -> List[Particle]:
     particles = []
     with open(file_name, "r") as f:
         for line in f:
@@ -58,20 +58,22 @@ def load_blobs_from_text(file_name: str) -> List[Particle]:
                 # Sanity check. During Kalman filter, the coordinates of the bbox might be out of
                 # the image. We need to check them before adding this particle into digraph.
                 if (x1 < 0 and x2 < 0) or \
-                        (x1 > commons.PIC_DIMENSION[0] and x2 > commons.PIC_DIMENSION[0]) or \
+                        (x1 > img_width and x2 > img_width) or \
                         (y1 < 0 and y2 < 0) or \
-                        (y1 > commons.PIC_DIMENSION[1] and y2 > commons.PIC_DIMENSION[1]):
+                        (y1 > img_height and y2 > img_height):
                     Logger.debug("Invalid particle. Coordinates outside the image. {:d} {:d} {:d} {:d}".format(x1, y1, x2, y2))
                     continue  # Skip this particle. Invalid.
 
                 x1_new = x1 if x1 >= 0 else 0
                 y1_new = y1 if y1 >= 0 else 0
-                x2_new = x2 if x2 < commons.PIC_DIMENSION[0] else commons.PIC_DIMENSION[0]
-                y2_new = y2 if y2 < commons.PIC_DIMENSION[1] else commons.PIC_DIMENSION[1]
+                x2_new = x2 if x2 < img_width else img_width
+                y2_new = y2 if y2 < img_height else img_height
 
                 width_new = x2_new - x1_new
                 height_new = y2_new - y1_new
-                if width <=0 or height <=0:
+
+                # If after adjustment, the particle doesn't have a valid size, discard it.
+                if width_new <=0 or height_new <=0:
                     Logger.debug("Invalid particle. Non-positive width or height. {:d} {:d} {:d} {:d}".format(x1, y1, x2, y2))
                     continue
                 particles.append(Particle([x1_new, y1_new], bbox=[width_new, height_new], id=id, time_frame=time_frame))
@@ -127,13 +129,16 @@ def parse_pascal_xml(file_path: str, area_threshold=config.AREA_THRESHOLD) -> Tu
     # sort in ascending order of y (row-index of numpy), and then x (column-index of numpy).
     particles.sort(key=lambda p: p.get_top_left_position_reversed())
     obj = re.match(".*_([0-9]+)_([a-zA-Z]*)([0-9]+)\.([a-zA-Z]+)", file_name)
-    image_id = int(obj.group(3))
-    video_id = int(obj.group(1))
-    id = 0
-    for p in particles:
-        p.set_id(id)
-        p.set_time_frame(image_id)
-        id += 1
+    if obj is None:
+        print(f"Cannot read video and image id from picture {file_name}")
+    else:
+        image_id = int(obj.group(3))
+        video_id = int(obj.group(1))
+        id = 0
+        for p in particles:
+            p.set_id(id)
+            p.set_time_frame(image_id)
+            id += 1
     return particles, file_name
         
 

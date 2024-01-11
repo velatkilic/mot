@@ -17,8 +17,8 @@ def subtract_brightfield_by_scaling(img_video, img_bf, scale = 0.8, shift_back=F
     """
     img_bf_invert = cv.bitwise_not(img_bf)
     img_video_invert = cv.bitwise_not(img_video)
-    bf_mode = mode(img_bf_invert, axis=None)[0][0]
-    video_mode = mode(img_video_invert, axis=None)[0][0]
+    bf_mode = mode(img_bf_invert, axis=None).mode
+    video_mode = mode(img_video_invert, axis=None).mode
     factor = scale * video_mode / bf_mode # Make the peak of histogram of the brightfield 
                                           # 0.8 to that of the video.
     # Scaling the peak of the pixel distribution of the brightfield image relative to that
@@ -32,23 +32,23 @@ def subtract_brightfield_by_scaling(img_video, img_bf, scale = 0.8, shift_back=F
     img_inverted_subtract = cv.bitwise_not(img_inverted_subtract) # Inverse back so particles are dark.
 
     if shift_back:
-        _mode_orig = mode(img_video, axis=None)[0][0]
-        _mode_result = mode(img_inverted_subtract, axis=None)[0][0]
+        _mode_orig = mode(img_video, axis=None).mode
+        _mode_result = mode(img_inverted_subtract, axis=None).mode
         img_inverted_subtract = img_inverted_subtract - (_mode_result - _mode_orig)
 
     return img_inverted_subtract, img_video_invert, img_bf_invert, bf_mode, video_mode, factor
 
-def subtract_brightfield_by_shifting(img_video, img_bf, scale=1, shift_back=False):
+def subtract_brightfield_by_shifting(img_video: np.ndarray, img_bf: np.ndarray, scale: float = 1., shift_back=False):
     """
     Subtract IMG_BF from IMG_VIDEO and return a new image.
 
-    This function shifts the brightfield image rather than scaling it by multiple a factor. This
-    way the shape of the pixcel distribution is saved.
+    This function shifts the brightfield image rather than scaling it by multiple a factor so that
+    the shape of the pixel distribution is preserved.
     """
     img_bf_invert = cv.bitwise_not(img_bf)
     img_video_invert = cv.bitwise_not(img_video)
-    bf_invert_mode = mode(img_bf_invert, axis=None)[0][0]
-    video_invert_mode = mode(img_video_invert, axis=None)[0][0]
+    bf_invert_mode = mode(img_bf_invert, axis=None).mode
+    video_invert_mode = mode(img_video_invert, axis=None).mode
     
     # Shfit the peak of the pixel distribution of bf image to align with that of the video.
     shift = bf_invert_mode - scale * video_invert_mode
@@ -62,13 +62,31 @@ def subtract_brightfield_by_shifting(img_video, img_bf, scale=1, shift_back=Fals
 
     if shift_back:
         # Shift the pixel distribution of image back to the original peak.
-        _video_mode = mode(img_result, axis=None)[0][0] # likely a large value close to 256.
-        _orig_video_mode = mode(img_video, axis=None)[0][0]
+        _video_mode = mode(img_result, axis=None).mode # likely a large value close to 256.
+        _orig_video_mode = mode(img_video, axis=None).mode
         _shift = _video_mode - _orig_video_mode
         # Recover the original background pixel value by subtracting a constant value
         img_result = img_result - _shift
 
     return img_result, img_video_invert, img_bf_invert_shifted, bf_invert_mode, video_invert_mode, shift
+
+def subtract_brightfield(orig_images: List[np.ndarray], image_brightfield: np.ndarray) -> List[np.ndarray]:
+    """A wrapper function of subtract_brightfield_by_shifting() to operate on multiple images.
+    """
+    if len(image_brightfield.shape) == 3:
+        img_bf = cv.imread(brightfield, cv.IMREAD_GRAYSCALE)
+    if prefix == None:
+        image_names = orig_image_names
+    else:
+        image_names = [f"{prefix}_{name.split('_')[-1]}" for name in orig_image_names]
+
+    for i in range(len(orig_images)):
+        img = cv.cvtColor(orig_images[i], cv.COLOR_BGR2GRAY)
+        if not use_scale:
+            # This is the default option. Simply shift the brightfield image rather than changing
+            # the shape of the pixel histogram
+            img_subtracted, *_ = sbf_shifting(img, img_bf, scale=scale, shift_back=shift_back)
+    
 
 def get_contour_center(cnt) -> List[int]:
     moments = cv.moments(cnt) # OpenCV contour object: numpy.ndarray of shape (n, 1, 2)

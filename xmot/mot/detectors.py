@@ -108,8 +108,10 @@ class DNN:
                 mask = mask[indx, ...]
                 scor = scor[indx, ...]
 
-        bbox = bbox.to("cpu").data.numpy()
-        mask = mask.to("cpu").data.numpy()
+        # For the dimensions of the variables, see doc of "torchvision.models.detection.maskrcnn_resnet50_fpn"
+        # https://pytorch.org/vision/main/models/generated/torchvision.models.detection.maskrcnn_resnet50_fpn.html
+        bbox = bbox.to("cpu").data.numpy() # [num_objects, 4]. The 4 columns are [x1, y1, x2, y2]
+        mask = mask.to("cpu").data.numpy() # [num_objects, 1, height, width]
         scor = scor.to("cpu").data.numpy()
         return bbox, mask#, scor
 
@@ -168,7 +170,8 @@ class GMM:
                  varThreshold=16, area_threshold=AREA_THRESHOLD):
         """
         Attributes:
-            images         : List       List of frames for prediction.
+            images         : List       List of frames for prediction. These images are the ones
+                                        that are actually used in prediction.
             train_images   : List       List of frames used for training. By default, it's the same
                                         as the images to be detected. Train_images are the actual
                                         images used in updating the GMM model and in prediction.
@@ -231,8 +234,10 @@ class GMM:
                                       outdir. Primarily for debugging purposes.
             skip_nested    : bool     Whether remove nested contours from the returned list.
         Return:
-            1. dict of bboxes in each image, with frame_id (image id) as key.
-            2. dict of contours in each images, with frame id as key. The contours in each list
+            1. dict of list of bboxes in each image, with frame_id (image id) as key.
+               When no particles above the threshold are detected, an empty list is added as
+               a place holder, making sure there's a list corresponding to each image.
+            2. dict of list of contours in each images, with frame id as key. The contours in each list
                match the order of corresponding bbox in the lists of the first dict.
         """
         if history == -1 and distance == -1: # Automatically decide both parameter
@@ -286,9 +291,9 @@ class GMM:
                 # Close gaps
                 mask = cv.morphologyEx(mask, cv.MORPH_CLOSE, GMM.KERNEL, iterations=2)
                 
-                # Remove noise again
-                mask = cv.morphologyEx(mask, cv.MORPH_OPEN, GMM.KERNEL, iterations=1)
-                mask = cv.morphologyEx(mask, cv.MORPH_CLOSE, GMM.KERNEL, iterations=1)
+                # Remove noise again (no effect after the above operations)
+                #mask = cv.morphologyEx(mask, cv.MORPH_OPEN, GMM.KERNEL, iterations=1)
+                #mask = cv.morphologyEx(mask, cv.MORPH_CLOSE, GMM.KERNEL, iterations=1)
                 
                 if outdir != None and i in outId:
                     cv.imwrite(str(backgroundDir.joinpath(f"background_{i}.png")), gmm.getBackgroundImage())
@@ -322,7 +327,7 @@ class GMM:
                     # TODO: In all detector and loading of labelled data, use contour 
                     # area as the threshold, not bbox.
                     if areaB > self.area_threshold:
-                        bbox.append(b) # In the PyTorch format.
+                        bbox.append(b) # In the PyTorch format: [x1, y1, x2, y2]
                         filtered_contours.append(cnt)
                 
                 if len(bbox) > 0:
@@ -362,41 +367,41 @@ class GMM:
         
         return dict_bbox, dict_contours
 
-    def predict(self, img, learningRate=-1):
-        """
-        Deprecated.
-
-        learningRate : int  Controls how background image is updated when gmm.apply() is called.
-                            -1: automatic update background image;
-                            0: don't update background image using the current image
-                            1: completely reinitialize the background image based on the current image.
-        """
-        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        mask = self.gmm.apply(gray, learningRate=learningRate)
-        # Morphological transformation: closing
-        kernel = np.ones((8, 8), dtype=np.uint8)
-        closing = cv.morphologyEx(mask, cv.MORPH_CLOSE, kernel, iterations=self.it_closing)
-
-        # Contours
-        contours, hierarchy = cv.findContours(closing, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-
-        # Bounding rectangle
-        bbox = []
-        for temp in contours:
-            area = cv.contourArea(temp)
-            if area > self.minArea:
-                x, y, w, h = cv.boundingRect(temp)
-                bbox.append([x, y, x + w, y + h])
-        return bbox, None
-
-    def __train(self):
-        """
-        Deprecated.
-        """
-        while (True):
-            _, img = self.cap.read()
-            if img is None: break
-            gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-            gray = gray[0:self.crop[0], 0:self.crop[1]]
-            self.gmm.apply(gray)
-        self.cap.release()
+    # def predict(self, img, learningRate=-1):
+    #     """
+    #     Deprecated.
+    # 
+    #     learningRate : int  Controls how background image is updated when gmm.apply() is called.
+    #                         -1: automatic update background image;
+    #                         0: don't update background image using the current image
+    #                         1: completely reinitialize the background image based on the current image.
+    #     """
+    #     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    #     mask = self.gmm.apply(gray, learningRate=learningRate)
+    #     # Morphological transformation: closing
+    #     kernel = np.ones((8, 8), dtype=np.uint8)
+    #     closing = cv.morphologyEx(mask, cv.MORPH_CLOSE, kernel, iterations=self.it_closing)
+    # 
+    #     # Contours
+    #     contours, hierarchy = cv.findContours(closing, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    # 
+    #     # Bounding rectangle
+    #     bbox = []
+    #     for temp in contours:
+    #         area = cv.contourArea(temp)
+    #         if area > self.minArea:
+    #             x, y, w, h = cv.boundingRect(temp)
+    #             bbox.append([x, y, x + w, y + h])
+    #     return bbox, None
+    # 
+    # def __train(self):
+    #     """
+    #     Deprecated.
+    #     """
+    #     while (True):
+    #         _, img = self.cap.read()
+    #         if img is None: break
+    #         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    #         gray = gray[0:self.crop[0], 0:self.crop[1]]
+    #         self.gmm.apply(gray)
+    #     self.cap.release()

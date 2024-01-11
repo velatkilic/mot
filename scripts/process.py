@@ -22,7 +22,8 @@ orig_ext = None
 @click.option("--end-id", default=sys.maxsize, help="ID of the last image (inclusive) to be included in the video")
 @click.option("--ext", type=str, default=None, help="Format of input images. If not specified, " \
               "use the first found valid image format.")
-def process(input_dir, start_id, end_id, ext):
+@click.option('--crop', type=int, multiple=True, default=None, help='4 integers specifying the crop size in x1, y1, x2, y2 order.')
+def process(input_dir, start_id, end_id, ext, crop):
     """
     Common batch processing routines of video images in INPUT_DIR.
 
@@ -50,6 +51,10 @@ def process(input_dir, start_id, end_id, ext):
         print(f"No valid image files found in {input_dir} with extension {ext}")
 
     orig_images = [cv.imread(f) for f in files] # color pics are already in BGR order, not RBG
+    if crop != None and len(crop) == 4:
+        print("Cropping images with rectangule: " + str(crop))
+        x1, y1, x2, y2 = crop
+        orig_images = [img[y1:y2, x1:x2, :] for img in orig_images]
     orig_image_names = [Path(f).resolve().name for f in files]
     orig_ext = ext
 
@@ -96,10 +101,11 @@ def format_transform(output_dir, prefix, new_ext):
               "brightfieldand image relative to video image.")
 @click.option("--use-scale", is_flag=True, help="Use scaling to subtract brightfield.")
 @click.option("--shift-back", is_flag=True, help="Shift the peak of pixel distribution back to that "\
-              "of the orignl image. Default is false, since GMM works better on non-shifted images.")
+              "of the orignl image. Default is False, since GMM works better on non-shifted images.")
 @click.option("--prefix", default=None, help="Prefix of the names of output images. If used, assume"\
               " input image names follow the pattern <old_prefix>_<id>.<ext>.")
-def subtract_brightfield(output_dir, brightfield, prefix, scale, use_scale, shift_back):
+@click.option('--crop', type=int, multiple=True, default=None, help='4 integers specifying the crop size in x1, y1, x2, y2 order.')
+def subtract_brightfield(output_dir, brightfield, prefix, scale, use_scale, shift_back, crop):
     """
     Subtracting BRIGHTFILED image from input images and write out to OUTPUT_DIR.
 
@@ -109,6 +115,11 @@ def subtract_brightfield(output_dir, brightfield, prefix, scale, use_scale, shif
         print("Note: Use the scaling approach to subtract brightfield image.")
     global orig_images, orig_ext, orig_image_names
     img_bf = cv.imread(brightfield, cv.IMREAD_GRAYSCALE)
+    if crop != None and len(crop) == 4:
+        print("Cropping brightfield image with : " + str(crop))
+        x1, y1, x2, y2 = crop
+        img_bf = img_bf[y1:y2, x1:x2]
+    
     if prefix == None:
         image_names = orig_image_names
     else:
@@ -117,7 +128,8 @@ def subtract_brightfield(output_dir, brightfield, prefix, scale, use_scale, shif
     for i in range(len(orig_images)):
         img = cv.cvtColor(orig_images[i], cv.COLOR_BGR2GRAY)
         if not use_scale:
-            # This is the default option. Simple shifting of the brightfield image.
+            # This is the default option. Simply shift the brightfield image rather than changing
+            # the shape of the pixel histogram
             img_subtracted, *_ = sbf_shifting(img, img_bf, scale=scale, shift_back=shift_back)
         else:
             img_subtracted, *_ = sbf_scaling(img, img_bf, scale=scale, shift_back=shift_back)

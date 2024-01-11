@@ -307,13 +307,13 @@ class Trajectory:
             sum += p.get_area()
         return sum / len(self.ptcls)
 
-    def predict_next_location(self) -> List[float]:
-        """
-            Return a pair of x, y values as the predicted position at the next time frame.
-        """
-        last_position = self.ptcls[-1].positions
-        new_position = np.add(last_position, self.velocity * commons.TIMEFRAMELENGTH)
-        return new_position
+    #def predict_next_location(self) -> List[float]:
+    #    """
+    #        Return a pair of x, y values as the predicted position at the next time frame.
+    #    """
+    #    last_position = self.ptcls[-1].positions
+    #    new_position = np.add(last_position, self.velocity * commons.TIMEFRAMELENGTH)
+    #    return new_position
 
     def reset(self):
         """
@@ -326,10 +326,10 @@ class Trajectory:
         self.__sorted = False
 
     def __str__(self) -> str:
-        string = "Trajectory: Particle id: {:3d}; ".format(self.id) + \
-                 "Start time: {:4d}; ".format(self.get_start_time()) + \
-                 "End time: {:4d}; ".format(self.get_end_time()) + \
-                 "Average size: {:6.2f}; ".format(self.get_average_particle_size()) + \
-                 "Average velocity: {:6.2f}; ".format(self.get_velocity()) + \
+        string = "Trajectory: Particle id: {:4d}; ".format(self.id) + \
+                 "Start time: {:5d}; ".format(self.get_start_time()) + \
+                 "End time: {:5d}; ".format(self.get_end_time()) + \
+                 "Average size: {:6.4f}; ".format(self.get_average_particle_size()) + \
+                 "Average velocity: {:6.4f}; ".format(self.get_velocity()) + \
                  "Shape: {:12s}".format(self.ptcls[0].get_shape())
         return string

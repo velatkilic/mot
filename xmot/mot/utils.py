@@ -79,7 +79,9 @@ def drawBlobs(img, blobs):
         x1,y1,x2,y2 = map(int,[x1,y1,x2,y2])
         color       = blobs[j].color
         color       = (int(color[0]), int(color[1]), int(color[2]))
-        cv.rectangle(img, (x1, y1), (x2, y2), color, 2)
+        if len(img.shape) != 3:
+            img = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
+        cv.rectangle(img, (x1, y1), (x2, y2), color, thickness = 2)
     return img
 
 def writeBlobs(blobs, file, frameID):
@@ -454,4 +456,35 @@ def filterBbox(list_bbox: List[List[int]], list_cnt: List[np.ndarray]= None):
     if list_cnt != None:
         ret_cnt = [list_cnt[i] for i in range(len(list_bbox)) if not to_remove[i]]
     return ret_bbox, ret_cnt
+
+def cnt_to_mask(cnt, height, width):
+    """Convert one opencv contour into a pyTorch format mask.
+
+    Pixels within the contour have value 255 (white) and pixels outside have value 0.
+
+    Args:
+        cnt:    One contour in opencv format, i.e. numpy array of Shape: [N, 1, 2] where N
+                is the number of anchor points.
+                Somehow, cv.findcontours() returns a tuple of contours
+                and each contour is a 3D NumPy array with one redundant dimension in the
+                middle.
+                E.g. contours[0]: 
+                array([[[50, 50]],
+                       [[50, 100]],
+                       [[100, 100]],
+                       [[100, 50]]], dtype=int32)
     
+    Return:
+        mask:   numpy.ndarray in the same shape of PyTorch predictions. [n, 1, height, width]
+    """
+    img = np.zeros((height, width), dtype=np.uint8)
+    # 1. The function expect a list of contours. So I wrap the cnt in a list.
+    # 2. 255 to indicate white
+    # 3. thickness=-1: fill in the contour
+    mask = cv.drawContours(img, [cnt], 0, (255), thickness=-1)
+
+    mask = mask[np.newaxis, np.newaxis, :, :] # Make the mask the same format as that returned
+                                              # from pyTorch. [n, 1, height, width]. n=1 here,
+                                              # so the first dimension is 1.
+    return mask
+
