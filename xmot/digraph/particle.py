@@ -3,14 +3,14 @@ import cv2 as cv
 
 class Particle:
     """Particles recorded in combustion videos.
-    
+
     Attributes:
-        position       : [int, int]     x, y positions in pixels of the upper left 
+        position       : [int, int]     x, y positions in pixels of the upper left
                                         corner of bbox. The x and y follows the OpenCV convention.
-                                        With respect to the numpy.ndarray representation, 
-                                        x is the column-index and y is the row-index.
+                                        With respect to the numpy.ndarray representation of the
+                                        image, x is the column-index and y is the row-index.
         bbox           : [int, int]     Width (in x) and height (in y) in pixels of the bbox
-    
+
     (Optional:)
         id             : int            ID of a particle
         time_frame     : int            Frame number of a particle in the video. It's used
@@ -19,7 +19,7 @@ class Particle:
                                         of the upper left corner of bbox
         contour        : numpy.ndarray  Contour object from OpenCV. The shape is always (n, 1, 2).
                                         "n" is the number of points in this contour.
-        bubble         : Particle       Partible object representing the bubble. It only 
+        bubble         : Particle       Partible object representing the bubble. It only
                                         needs position, bbox.
         shape          : str            Shape of particle. Permitted values are "circle", "non-circle".
         type           : str            Type of particle. "agglomerate", "shell", "particle".
@@ -56,26 +56,26 @@ class Particle:
 
     def set_time_frame(self, time_frame):
         self.time_frame = time_frame
-    
+
     def get_time_frame(self):
         return self.time_frame
 
     def set_position(self, position):
         self.position = position
-    
+
     def get_position(self):
         """
         Return the upper left position of bbox.
         """
         return self.position # TODO: make deepcopy
-    
+
     # Utility functions for opencv plotting.
     def get_top_left_position(self):
         return self.position
-    
+
     def get_lower_right_position(self):
         return [self.position[0] + self.bbox[0], self.position[1] + self.bbox[1]]
-    
+
     def get_top_left_position_reversed(self):
         return [self.position[1], self.position[0]]
 
@@ -91,22 +91,22 @@ class Particle:
 
     def get_bbox(self):
         return self.bbox
-    
+
     def get_bbox_torch(self):
         """
         Return [x1, y1, x2, y2]
         """
         return [self.position[0], self.position[1], self.position[0] + self.bbox[0], self.position[1] + self.bbox[1]]
-    
+
     def get_area_bbox(self):
         return self.bbox[0] * self.bbox[1]
-    
+
     def get_area(self):
         return self.bbox[0] * self.bbox[1]
 
     def set_bubble(self, bubble):
         self.bubble = bubble
-    
+
     def have_bubble(self):
         return self.bubble != None
 
@@ -130,7 +130,7 @@ class Particle:
 
     def get_shape(self):
         return self.shape
-    
+
     def set_type(self, type):
         self.type = type
 
@@ -148,7 +148,7 @@ class Particle:
             return "{:s}_{:s}".format(self.type, self.shape)
         elif self.type == "agglomerate":
             return "agglomerate"
-        
+
         return "N/A"
 
     def __str__(self) -> str:
@@ -162,6 +162,6 @@ class Particle:
                  #"Has_bubble: {:5s}".format(str(self.bubble != None))
                  # Can't detect bubble for now. No point of printing it.
         return string
-    
+
     def __repr__(self) -> str:
         return "Particle(): particle identified in 2D image"
