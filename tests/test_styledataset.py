@@ -1,5 +1,5 @@
 import unittest
-from xmot.datagen.style_data_gen_mask import StyleDatasetGen
+from xmot.datagen.style_data_gen import StyleDatasetGen
 from xmot.dataset import Dataset
 import os
 
@@ -15,4 +15,4 @@ class TestStyleDataset(unittest.TestCase):
         sdset = StyleDatasetGen(dset=dset, len=10)
         sdset.gen_dataset()
 
-        print("lol")
+        print("End.")

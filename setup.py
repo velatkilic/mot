@@ -40,7 +40,10 @@ setuptools.setup(
         "Pillow",
         "click",
         "matplotlib",
-        "scikit-image"
+        "scikit-image",
+        "scikit-learn",
+        "natsort",
+        "pandas"
     ],
 
     extras_require = {

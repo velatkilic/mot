@@ -11,12 +11,12 @@ import numpy as np
 from xmot.logger import Logger
 from xmot.digraph.particle import Particle
 
-CLOSE_IN_TIME = 3
-CLOSE_IN_SPACE = 40
-#EVENT_TIME_WINDOW = 3   # Span of time frames allowed between trajectory start times 
-#                        # to be considered as candidates for events.
-BACK_TRACE_LIMIT = 3    # Time frames before the start of a trajectory allowed to 
+BACK_TRACE_LIMIT = 3    # Time frames before the start time of a trajectory allowed to
                         # estimate position at.
+CLOSE_IN_TIME = BACK_TRACE_LIMIT
+CLOSE_IN_SPACE = 40
+#EVENT_TIME_WINDOW = 3   # Span of time frames allowed between trajectory start times
+#                        # to be considered as candidates for events.
 
 def distance(a: List[float], b: List[float]) -> float:
     """L2 norm of vectors of any dimension."""
@@ -32,14 +32,34 @@ def distance(a: List[float], b: List[float]) -> float:
         sum += (a[i] - b[i])**2
     return math.sqrt(sum)
 
+def vector_angle(v: np.array, u: np.array) -> float:
+    """
+    Calculate the angle in degrees between two vectors.
+    """
+    v_norm = np.linalg.norm(v)
+    u_norm = np.linalg.norm(u)
+    if v_norm == 0 or u_norm == 0:
+        return float("nan")
+
+    cos = np.dot(v, u) / (np.linalg.norm(v) * np.linalg.norm(u))
+
+    # Round because of numerical precision
+    if cos > 1 and cos - 1 < 0.0001:
+        cos = 1
+    if cos < -1 and -1 - cos < 0.0001:
+        cos = -1
+
+    return np.degrees(np.arccos(cos))
+
 def ptcl_distance(p1, p2):
     return distance(p1.get_position(), p2.get_position())
+
 
 def traj_distance(t1, t2) -> float:
     """
         Calculate the nearest distance between two trajectories during the video.
 
-        If t1 ends before (starts late) than t2, calculate the distance between the 
+        If t1 ends before (starts late) than t2, calculate the distance between the
         end (start) of t1 and start (end) of t2. If two trajectory are too far away
         in time (difference larger than self.CLOSE_IN_TIME), they shouldn't have
         any relation and distance is set to infinity.
@@ -62,7 +82,7 @@ def traj_distance(t1, t2) -> float:
     else:
         start_time = max(t1.get_start_time(), t2.get_start_time())
         end_time = min(t1.get_end_time(), t2.get_end_time())
-        t1_ptcls = t1.get_snapshots(start_time, end_time)
+        t1_ptcls = t1.get_snapshots(start_time, end_time) # Deepcopy of particles
         t2_ptcls = t2.get_snapshots(start_time, end_time)
         min_dist = float("inf")
         for p1 in t1_ptcls:
@@ -91,7 +111,7 @@ def extract_images(video: str, to_gray = False):
 
 def collect_images(dir: str, prefix: str, ext: str, start: int, end: int) \
     -> List[Image.Image]:
-    files = [f for f in listdir(dir) 
+    files = [f for f in listdir(dir)
               if f.startswith(prefix) and f.endswith(ext)]
     files.sort(key=lambda f: int(f.replace(prefix, "").replace("." + ext, "")))
     numbers = [int(f.replace(prefix, "").replace("." + ext, "")) for f in files]
@@ -114,7 +134,7 @@ def paste_images(left_imgs: List[Image.Image], right_imgs: List[Image.Image], de
     # original image and reproduced image should have same height.
     if len(left_imgs) != len(right_imgs):
         Logger.warning("There aren't same number of detection and reproduced iamges! Reproduced video will only be generated for the frames having detection images.")
-    
+
     new_res = (left_imgs[0].width + right_imgs[0].width, left_imgs[0].height)
     for i in range(len(left_imgs)):
         im = Image.new("RGBA", new_res)
@@ -128,11 +148,11 @@ def paste_images(left_imgs: List[Image.Image], right_imgs: List[Image.Image], de
         images.append(im)
     return images
 
-def generate_video(images, output: str, fps: int = 24, 
+def generate_video(images, output: str, fps: int = 24,
                    res: Tuple[int] = None, format: str = "avi"):
     """
         Generate video from given list of iamges.
-        
+
         Args:
             images: List[np.array] List of images in openCV format (i.e. np.array).
             output: Name of the video. If extension is given, format is ignored.
@@ -144,7 +164,7 @@ def generate_video(images, output: str, fps: int = 24,
     """
     # Collect info from images
     # If resolution not given, use maximum size of all images.
-    if res == None:
+    if res is None:
         # image are numpy.ndarray. image.shape = (height, width, number of color channels)
         max_height = max([i.shape[0] for i in images])
         max_width = max([i.shape[1] for i in images])
@@ -167,3 +187,9 @@ def contrast_stretch(img, saturation=2.0):
     lower_limit, upper_limit = np.percentile(img, (saturation, 100 - saturation))
     img_stretched = exposure.rescale_intensity(img, in_range=(lower_limit, upper_limit))
     return img_stretched
+
+def torch_bbox_to_coordinates(bbox) -> List[Tuple[int]]:
+    """
+    Transform bbox in torch format to pair of coordinates.
+    """
+    return [(bbox[0], bbox[1]), (bbox[2], bbox[3])]

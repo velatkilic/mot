@@ -8,7 +8,8 @@ from typing import List
 
 from xmot.mot.identifier import identify
 from xmot.digraph.digraph import Digraph
-from xmot.digraph.utils import load_blobs_from_text, collect_images, paste_images, generate_video
+from xmot.digraph.utils import collect_images, paste_images, generate_video
+from xmot.digraph.parser import load_blobs_from_text
 from xmot.digraph import commons
 from xmot.logger import Logger
 

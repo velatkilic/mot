@@ -1,0 +1,3 @@
+[submodule "examples/GMM/xmot_example_data"]
+	path = examples/GMM/xmot_example_data
+	url = git@github.com:ywang271828/XMOT_example_data.git
